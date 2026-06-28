@@ -764,7 +764,7 @@ function PlannedMaintenance({ propertyId }) {
     </div>
     <div style={{ display:"grid",gridTemplateColumns:d?"repeat(4,1fr)":"repeat(2,1fr)",gap:14,marginBottom:20 }}>
       <StatCard label="Poster" value={filtered.length} />
-      <StatCard label="Beräknad kostnad" value={fmtKkr(totalCost)+" kkr"} color={G} />
+      <StatCard label="Beräknad kostnad" value={fmtKkr(totalCost)} color={G} />
       <StatCard label="Genomförda" value={planned.filter(p=>p.status==="genomförd").length} color="#22c55e" />
       <StatCard label="Planerade" value={planned.filter(p=>p.status==="planerad").length} color="#6366f1" />
     </div>
@@ -957,7 +957,7 @@ function Proforma({ propertyId }) {
       :<div style={{ display:"flex",gap:8 }}><button onClick={()=>saveProforma(form)} disabled={saving} style={btnStyle(G)}>{saving?"Sparar…":"💾 Spara"}</button><button onClick={()=>{ setEditing(false); setForm(null); }} style={btnStyle("#888")}>Avbryt</button></div>}
     </div>
     <div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,marginBottom:24 }}>
-      {[{label:"Driftnetto",value:fmtKkr(driftnetto)+" kkr",sub:"Intäkter – drift – skatt",color:G},{label:"Direktavkastning",value:fmtPct(driftnettoProc),sub:"Driftnetto / köpeskilling",color:driftnettoProc>=5?"#22c55e":"#f59e0b"},{label:"Kassaflöde",value:fmtKkr(kassaflode)+" kkr",sub:"Efter skatt + avskrivning",color:kassaflode>0?"#22c55e":"#ef4444"},{label:"Avkastning EK",value:fmtPct(avkastnEgetKap),sub:"Kassaflöde / eget kapital",color:avkastnEgetKap>=8?"#22c55e":"#f59e0b"}].map(k=><Card key={k.label} style={{ padding:16 }}>
+      {[{label:"Driftnetto",value:fmtKkr(driftnetto),sub:"Intäkter – drift – skatt",color:G},{label:"Direktavkastning",value:fmtPct(driftnettoProc),sub:"Driftnetto / köpeskilling",color:driftnettoProc>=5?"#22c55e":"#f59e0b"},{label:"Kassaflöde",value:fmtKkr(kassaflode),sub:"Efter skatt + avskrivning",color:kassaflode>0?"#22c55e":"#ef4444"},{label:"Avkastning EK",value:fmtPct(avkastnEgetKap),sub:"Kassaflöde / eget kapital",color:avkastnEgetKap>=8?"#22c55e":"#f59e0b"}].map(k=><Card key={k.label} style={{ padding:16 }}>
         <div style={{ fontSize:12,color:"#888",marginBottom:4 }}>{k.label}</div>
         <div style={{ fontSize:24,fontWeight:800,color:k.color }}>{k.value}</div>
         <div style={{ fontSize:11,color:"#aaa",marginTop:3 }}>{k.sub}</div>
@@ -980,26 +980,26 @@ function Proforma({ propertyId }) {
             {[["Köpeskilling","kopeskilling"],["Eget kapital","egenInsats"],["Belåning","belaaning"]].map(([l,k])=><div key={k} style={{ marginBottom:8 }}><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>{l}</label>{numIn(form[k],v=>setForm({...form,[k]:Number(v)||0}))}</div>)}
             <div style={{ marginBottom:8 }}><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>Ränta (%)</label>{numIn(form.ranta,v=>setForm({...form,ranta:Number(v)||0}))}</div>
           </div>:<>
-            <Row label="Köpeskilling" value={fmtKkr(d2.kopeskilling||0)+" kkr"} />
-            <Row label="Eget kapital" value={fmtKkr(d2.egenInsats||0)+" kkr"} sub={d2.kopeskilling?fmtPct((d2.egenInsats||0)/(d2.kopeskilling||1)*100)+" av köpeskillingen":""} />
-            <Row label="Belåning" value={fmtKkr(d2.belaaning||0)+" kkr"} />
+            <Row label="Köpeskilling" value={fmtKkr(d2.kopeskilling||0)} />
+            <Row label="Eget kapital" value={fmtKkr(d2.egenInsats||0)} sub={d2.kopeskilling?fmtPct((d2.egenInsats||0)/(d2.kopeskilling||1)*100)+" av köpeskillingen":""} />
+            <Row label="Belåning" value={fmtKkr(d2.belaaning||0)} />
             <Row label="Ränta" value={fmtPct(d2.ranta||0)} />
-            <Row label="Räntekostnad/år" value={fmtKkr(ranta)+" kkr"} highlight />
+            <Row label="Räntekostnad/år" value={fmtKkr(ranta)} highlight />
           </>}
         </Section>
       </div>
       <div>
         <Section title="📋 Resultaträkning">
-          <Row label="Hyresintäkter" value={editing?<div style={{ width:120 }}>{numIn(form.hyresintakter,v=>setForm({...form,hyresintakter:Number(v)||0}))}</div>:fmtKkr(d2.hyresintakter||0)+" kkr"} />
-          <Row label="Driftkostnader" value={"– "+fmtKkr(totalDrift)+" kkr"} />
-          <Row label="Fastighetsskatt" value={editing?<div style={{ width:120 }}>{numIn(form.fastighetsskatt,v=>setForm({...form,fastighetsskatt:Number(v)||0}))}</div>:"– "+fmtKkr(d2.fastighetsskatt||0)+" kkr"} />
-          <Row label="Driftnetto" value={fmtKkr(driftnetto)+" kkr"} highlight sub={fmtPct(driftnettoProc)+" direktavkastning"} />
+          <Row label="Hyresintäkter" value={editing?<div style={{ width:120 }}>{numIn(form.hyresintakter,v=>setForm({...form,hyresintakter:Number(v)||0}))}</div>:fmtKkr(d2.hyresintakter||0)} />
+          <Row label="Driftkostnader" value={"– "+fmtKkr(totalDrift)} />
+          <Row label="Fastighetsskatt" value={editing?<div style={{ width:120 }}>{numIn(form.fastighetsskatt,v=>setForm({...form,fastighetsskatt:Number(v)||0}))}</div>:"– "+fmtKkr(d2.fastighetsskatt||0)} />
+          <Row label="Driftnetto" value={fmtKkr(driftnetto)} highlight sub={fmtPct(driftnettoProc)+" direktavkastning"} />
           <div style={{ marginTop:8 }} />
-          <Row label="Avskrivning" value={"– "+fmtKkr(avskrivning)+" kkr"} sub={fmtPct(d2.avskrivningsprocent||0)+" på byggnad"} />
-          <Row label="Räntekostnad" value={"– "+fmtKkr(ranta)+" kkr"} />
-          <Row label="Resultat före skatt" value={fmtKkr(resForeskatt)+" kkr"} />
-          <Row label={"Skatt ("+fmtPct(d2.skattesats||0)+")"} value={"– "+fmtKkr(skatt)+" kkr"} />
-          <Row label="Kassaflöde" value={fmtKkr(kassaflode)+" kkr"} highlight />
+          <Row label="Avskrivning" value={"– "+fmtKkr(avskrivning)} sub={fmtPct(d2.avskrivningsprocent||0)+" på byggnad"} />
+          <Row label="Räntekostnad" value={"– "+fmtKkr(ranta)} />
+          <Row label="Resultat före skatt" value={fmtKkr(resForeskatt)} />
+          <Row label={"Skatt ("+fmtPct(d2.skattesats||0)+")"} value={"– "+fmtKkr(skatt)} />
+          <Row label="Kassaflöde" value={fmtKkr(kassaflode)} highlight />
         </Section>
       </div>
     </div>
@@ -1007,12 +1007,12 @@ function Proforma({ propertyId }) {
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
         {[["Värme","varme"],["Vatten & avlopp","vattenAvlopp"],["Sophämtning","sophantning"],["Fastighetsel","fastighetsel"],["Fastighetsskötsel","fastighetsSkotsel"],["Snöröjning","snorojning"],["Försäkring","forsakring"],["Reparationer","reparationer"],["Långsiktigt underhåll","langsiktigtUnderhall"]].map(([label,key])=><div key={key} style={{ padding:"8px 12px",background:"#f8f9fb",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8 }}>
           <span style={{ fontSize:13,color:"#555" }}>{label}</span>
-          {editing?numIn((form.driftkostnader||{})[key],v=>setForm({...form,driftkostnader:{...(form.driftkostnader||{}),[key]:Number(v)||0}})):<span style={{ fontSize:13,fontWeight:600,color:G }}>{fmtKkr((d2.driftkostnader||{})[key]||0)+" kkr"}</span>}
+          {editing?numIn((form.driftkostnader||{})[key],v=>setForm({...form,driftkostnader:{...(form.driftkostnader||{}),[key]:Number(v)||0}})):<span style={{ fontSize:13,fontWeight:600,color:G }}>{fmtKkr((d2.driftkostnader||{})[key]||0)}</span>}
         </div>)}
       </div>
       {!editing&&<div style={{ marginTop:12,padding:"10px 14px",background:"#e8f5e9",borderRadius:8,display:"flex",justifyContent:"space-between" }}>
         <span style={{ fontWeight:700,color:G }}>Totalt</span>
-        <span style={{ fontWeight:800,color:G }}>{fmtKkr(totalDrift)+" kkr"}</span>
+        <span style={{ fontWeight:800,color:G }}>{fmtKkr(totalDrift)}</span>
       </div>}
       {editing&&<div style={{ marginTop:16 }}>
         <div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8 }}>Övriga antaganden</div>
