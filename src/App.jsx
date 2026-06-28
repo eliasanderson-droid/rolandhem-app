@@ -565,7 +565,24 @@ function Apartments({ propertyId, properties }) {
   }
   async function saveNew() {
     if (!addForm.unit) return;
-    await sb.from("tenants").insert([{...addForm, property_id:propertyId, rent:Number(addForm.rent)||0}]);
+    const item = {
+      property_id: propertyId,
+      unit: addForm.unit,
+      name: addForm.name || null,
+      email: addForm.email || null,
+      phone: addForm.phone || null,
+      rent: Number(addForm.rent) || 0,
+      sqm: addForm.sqm ? Number(addForm.sqm) : null,
+      floor: addForm.floor !== "" && addForm.floor !== null ? Number(addForm.floor) : null,
+      balcony: !!addForm.balcony,
+      parking: !!addForm.parking,
+      notes: addForm.notes || null,
+      move_in: addForm.move_in || null,
+      lease_end: addForm.lease_end || null,
+      status: addForm.status || "aktiv",
+    };
+    const { error } = await sb.from("tenants").insert([item]);
+    if (error) { alert("Fel: " + error.message); return; }
     setAddForm(null); load();
   }
   async function remove(id) {
