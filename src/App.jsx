@@ -113,17 +113,38 @@ async function uploadFile(file, bucket, path) {
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function Dashboard({ tenants, contracts, issues, properties, selectedProperty }) {
   const d = useIsDesktop();
+  const [proformas, setProformas] = useState([]);
+
+  useEffect(() => {
+    sb.from("proformas").select("property_id,data").then(({ data }) => setProformas(data||[]));
+  }, []);
+
   const openIssues = issues.filter(i => i.status !== "åtgärdad").length;
-  const totalRent = tenants.reduce((s,t) => s+(t.rent||0), 0);
+  const totalRentMon = tenants.reduce((s,t) => s+(t.rent||0)+(t.parking_cost||0), 0);
+  const totalRentYear = totalRentMon * 12;
+
+  // Amortering from proformas for relevant properties
+  const relevantPropIds = selectedProperty
+    ? [selectedProperty.id]
+    : properties.map(p => p.id);
+  const totalAmorteringYear = proformas
+    .filter(pf => relevantPropIds.includes(pf.property_id))
+    .reduce((s, pf) => s + ((pf.data?.belaaning||0) * ((pf.data?.amorteringsprocent ?? 4) / 100)), 0);
+  const totalAmorteringMon = totalAmorteringYear / 12;
+
   const expiringSoon = contracts.filter(c => { const x=daysUntil(c.end_date); return x!=null&&x>=0&&x<=90; });
   const recent = [...issues].sort((a,b)=>(b.reported||"").localeCompare(a.reported||"")).slice(0,4);
   return <div>
     <h2 style={{ fontSize:22, fontWeight:700, color:G, marginBottom:20 }}>{selectedProperty?`Översikt – ${selectedProperty.name}`:"Översikt – Alla fastigheter"}</h2>
-    <div style={{ display:"grid", gridTemplateColumns:d?"repeat(4,1fr)":"repeat(2,1fr)", gap:16, marginBottom:24 }}>
+    <div style={{ display:"grid", gridTemplateColumns:d?"repeat(3,1fr)":"repeat(2,1fr)", gap:16, marginBottom:16 }}>
       <StatCard label="Hyresgäster" value={tenants.length} sub={`${properties.length} fastigheter`} />
-      <StatCard label="Månadshyra" value={fmt(totalRent)} color={G} />
+      <StatCard label="Hyresintäkt/mån" value={fmt(totalRentMon)} color={G} />
+      <StatCard label="Hyresintäkt/år" value={fmt(totalRentYear)} color={G} />
+    </div>
+    <div style={{ display:"grid", gridTemplateColumns:d?"repeat(3,1fr)":"repeat(2,1fr)", gap:16, marginBottom:24 }}>
+      <StatCard label="Amortering/mån" value={fmt(totalAmorteringMon)} sub="baserat på proforma" color="#6366f1" />
+      <StatCard label="Amortering/år" value={fmt(totalAmorteringYear)} sub="baserat på proforma" color="#6366f1" />
       <StatCard label="Öppna ärenden" value={openIssues} color="#f59e0b" />
-      <StatCard label="Kontrakt utgår" value={expiringSoon.length} sub="inom 90 dagar" color={expiringSoon.length>0?"#ef4444":"#22c55e"} />
     </div>
     <div style={{ display:"grid", gridTemplateColumns:d?"1fr 1fr":"1fr", gap:20 }}>
       <Card>
