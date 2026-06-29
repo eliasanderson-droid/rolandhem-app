@@ -1044,6 +1044,8 @@ function RentLog({ propertyId, properties }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(true);
+  const [editingGroup, setEditingGroup] = useState(null);
+  const [editItems, setEditItems] = useState([]);
   const d = useIsDesktop();
 
   // Form state
@@ -1132,6 +1134,7 @@ function RentLog({ propertyId, properties }) {
       {Object.values(grouped).map((g,idx)=>{
         const totalOld = g.items.reduce((s,i)=>s+i.old_rent,0);
         const totalNew = g.items.reduce((s,i)=>s+i.new_rent,0);
+        const isEditing = editingGroup===idx;
         return <Card key={idx} style={{ padding:18 }}>
           <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
             <div>
@@ -1142,18 +1145,56 @@ function RentLog({ propertyId, properties }) {
             <div style={{ textAlign:"right" }}>
               <div style={{ fontSize:13,color:"#888" }}>{fmt(totalOld)} → <span style={{ fontWeight:700,color:G }}>{fmt(totalNew)}</span>/mån</div>
               <div style={{ fontSize:12,color:"#22c55e",fontWeight:600 }}>+{fmt(totalNew-totalOld)}/mån</div>
+              <button onClick={()=>{ setEditingGroup(isEditing?null:idx); setEditItems(g.items.map(i=>({...i}))); }} style={{ ...iconBtn,fontSize:13,marginTop:4 }}>{isEditing?"✕ Avbryt":"✏️ Redigera"}</button>
             </div>
           </div>
-          <div style={{ display:"grid",gridTemplateColumns:d?"1fr 1fr 1fr":"1fr 1fr",gap:6 }}>
-            {g.items.map(i=>{
-              const t=tenants.find(x=>x.id===i.tenant_id);
-              return <div key={i.id} style={{ background:"#f8f9fb",borderRadius:8,padding:"8px 12px",fontSize:13 }}>
-                <span style={{ fontWeight:600,color:G }}>Lgh {t?.unit||"–"}</span>
-                <span style={{ color:"#888",marginLeft:6 }}>{t?.name||"–"}</span>
-                <div style={{ color:"#aaa",fontSize:12 }}>{fmt(i.old_rent)} → {fmt(i.new_rent)}</div>
-              </div>;
-            })}
-          </div>
+
+          {isEditing ? (
+            <div>
+              {editItems.map((item,i)=>{
+                const t=tenants.find(x=>x.id===item.tenant_id);
+                return <div key={item.id} style={{ display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #eee" }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13,fontWeight:600,color:G }}>Lgh {t?.unit||"–"} · {t?.name||"–"}</div>
+                    <div style={{ fontSize:12,color:"#aaa" }}>Gammal hyra: {fmt(item.old_rent)}</div>
+                  </div>
+                  <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
+                    <span style={{ fontSize:12,color:"#aaa" }}>Ny hyra:</span>
+                    <input
+                      type="number"
+                      value={item.new_rent}
+                      onChange={e=>setEditItems(prev=>prev.map((x,j)=>j===i?{...x,new_rent:Number(e.target.value)||x.new_rent,increase_pct:Number(((Number(e.target.value)-x.old_rent)/x.old_rent*100).toFixed(1))}:x))}
+                      style={{ width:90,padding:"5px 8px",borderRadius:6,border:"1px solid #c8e6c9",fontSize:14,fontWeight:700,color:G,textAlign:"right" }}
+                    />
+                    <span style={{ fontSize:12,color:"#aaa" }}>kr</span>
+                  </div>
+                </div>;
+              })}
+              <div style={{ marginTop:12,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                <div style={{ fontSize:13,color:G,fontWeight:600 }}>
+                  Ny total: {fmt(editItems.reduce((s,i)=>s+i.new_rent,0))}/mån
+                </div>
+                <button onClick={async()=>{
+                  for (const item of editItems) {
+                    await sb.from("rent_log").update({ new_rent:item.new_rent, increase_pct:item.increase_pct }).eq("id", item.id);
+                    if (applyToTenants) await sb.from("tenants").update({ rent:item.new_rent }).eq("id", item.tenant_id);
+                  }
+                  setEditingGroup(null); loadLogs();
+                }} style={btnStyle(G)}>💾 Spara ändringar</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display:"grid",gridTemplateColumns:d?"1fr 1fr 1fr":"1fr 1fr",gap:6 }}>
+              {g.items.map(i=>{
+                const t=tenants.find(x=>x.id===i.tenant_id);
+                return <div key={i.id} style={{ background:"#f8f9fb",borderRadius:8,padding:"8px 12px",fontSize:13 }}>
+                  <span style={{ fontWeight:600,color:G }}>Lgh {t?.unit||"–"}</span>
+                  <span style={{ color:"#888",marginLeft:6 }}>{t?.name||"–"}</span>
+                  <div style={{ color:"#aaa",fontSize:12 }}>{fmt(i.old_rent)} → {fmt(i.new_rent)}</div>
+                </div>;
+              })}
+            </div>
+          )}
         </Card>;
       })}
     </div>
