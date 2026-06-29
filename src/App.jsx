@@ -413,7 +413,8 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
         </div>
         <div style={{ textAlign:"right" }}>
           <div style={{ fontSize:11,color:"rgba(255,255,255,0.4)",textTransform:"uppercase" }}>Hyra/mån</div>
-          <div style={{ fontSize:24,fontWeight:800,color:"#6fcf97" }}>{fmt(tenant.rent)}</div>
+          <div style={{ fontSize:24,fontWeight:800,color:"#6fcf97" }}>{fmt((tenant.rent||0)+(tenant.parking_cost||0))}</div>
+          {tenant.parking_cost>0&&<div style={{ fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:2 }}>varav parkering {fmt(tenant.parking_cost)}</div>}
         </div>
       </div>
     </Card>
@@ -436,7 +437,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
       <Card>
         <h3 style={{ fontSize:14,fontWeight:700,color:G,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.05em" }}>Hyresgäst</h3>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
-          {[["Namn",tenant.name||"–"],["Status",tenant.status||"aktiv"],["E-post",tenant.email||"–"],["Telefon",tenant.phone||"–"],["Inflyttning",tenant.move_in||"–"],["Kontraktsslut",tenant.lease_end||"Tillsvidare"],["Hyra/mån",fmt(tenant.rent)]].map(([l,v])=><div key={l}><div style={{ fontSize:11,color:"#aaa",textTransform:"uppercase",fontWeight:600 }}>{l}</div><div style={{ fontSize:14,fontWeight:600,color:G,marginTop:3 }}>{v}</div></div>)}
+          {[["Namn",tenant.name||"–"],["Status",tenant.status||"aktiv"],["E-post",tenant.email||"–"],["Telefon",tenant.phone||"–"],["Inflyttning",tenant.move_in||"–"],["Kontraktsslut",tenant.lease_end||"Tillsvidare"],["Hyra/mån",fmt((tenant.rent||0)+(tenant.parking_cost||0))+(tenant.parking_cost>0?` (inkl. parkering ${fmt(tenant.parking_cost)})`:"")] ].map(([l,v])=><div key={l}><div style={{ fontSize:11,color:"#aaa",textTransform:"uppercase",fontWeight:600 }}>{l}</div><div style={{ fontSize:14,fontWeight:600,color:G,marginTop:3 }}>{v}</div></div>)}
         </div>
       </Card>
       <Card>
@@ -613,7 +614,7 @@ function Apartments({ propertyId, properties }) {
           <div style={{ fontSize:12,color:"#aaa",marginTop:2 }}>{[t.email,t.sqm?`${t.sqm} m²`:null,t.floor!=null?`${t.floor} tr`:null,t.balcony?"🌿":null,t.parking?"🚗":null].filter(Boolean).join(" · ")}</div>
         </div>
         <div style={{ textAlign:"right",flexShrink:0 }}>
-          <div style={{ fontWeight:700,fontSize:15,color:G }}>{fmt(t.rent)}</div>
+          <div style={{ fontWeight:700,fontSize:15,color:G }}>{fmt((t.rent||0)+(t.parking_cost||0))}</div>
           <Badge label={t.status||"aktiv"} color={statusColor[t.status||"aktiv"]} />
         </div>
         <div style={{ color:"#ccc",fontSize:20 }}>›</div>
