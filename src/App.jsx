@@ -429,7 +429,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
         <div style={{ display:"flex",gap:10,marginTop:14 }}>
           {[["🌿","BALKONG",tenant.balcony],["🚗","PARKERING",tenant.parking]].map(([emoji,lbl,val])=><div key={lbl} style={{ display:"flex",alignItems:"center",gap:8,background:val?"#f0faf4":"#f5f5f5",border:`1px solid ${val?"#a7f3d0":"#e0e0e0"}`,borderRadius:8,padding:"8px 14px" }}>
             <span style={{ fontSize:18 }}>{emoji}</span>
-            <div><div style={{ fontSize:11,color:"#aaa",fontWeight:600 }}>{lbl}</div><div style={{ fontSize:13,fontWeight:700,color:val?G:"#aaa" }}>{val?"Ja":"Nej"}</div></div>
+            <div><div style={{ fontSize:11,color:"#aaa",fontWeight:600 }}>{lbl}</div><div style={{ fontSize:13,fontWeight:700,color:val?G:"#aaa" }}>{lbl==="PARKERING"&&val?(tenant.parking_cost?`${fmt(tenant.parking_cost)}/mån`:"Ingår i hyran"):(val?"Ja":"Nej")}</div></div>
           </div>)}
         </div>
       </Card>
@@ -458,10 +458,14 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
         <div style={{ flex:1 }}><label style={labelStyle}>Storlek (m²)</label><input type="number" value={editForm.sqm??""} onChange={e=>setEditForm({...editForm,sqm:e.target.value===""?null:Number(e.target.value)})} style={inputStyle} /></div>
         <div style={{ flex:1 }}><label style={labelStyle}>Hyra/mån</label><input type="number" value={editForm.rent||""} onChange={e=>setEditForm({...editForm,rent:e.target.value})} style={inputStyle} /></div>
       </div>
-      <div style={{ display:"flex",gap:16,marginBottom:14 }}>
+      <div style={{ display:"flex",gap:16,marginBottom:editForm.parking?6:14 }}>
         <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,fontWeight:600,color:"#444" }}><input type="checkbox" checked={!!editForm.balcony} onChange={e=>setEditForm({...editForm,balcony:e.target.checked})} style={{ width:16,height:16 }} /> 🌿 Balkong</label>
-        <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,fontWeight:600,color:"#444" }}><input type="checkbox" checked={!!editForm.parking} onChange={e=>setEditForm({...editForm,parking:e.target.checked})} style={{ width:16,height:16 }} /> 🚗 Parkering</label>
+        <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,fontWeight:600,color:"#444" }}><input type="checkbox" checked={!!editForm.parking} onChange={e=>setEditForm({...editForm,parking:e.target.checked,parking_cost:e.target.checked?editForm.parking_cost:null})} style={{ width:16,height:16 }} /> 🚗 Parkering</label>
       </div>
+      {editForm.parking&&<div style={{ marginBottom:14 }}>
+        <label style={labelStyle}>Parkeringskostnad (kr/mån)</label>
+        <input type="number" value={editForm.parking_cost||""} onChange={e=>setEditForm({...editForm,parking_cost:e.target.value?Number(e.target.value):null})} style={inputStyle} placeholder="0 = ingår i hyran" />
+      </div>}
       <div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",marginBottom:10 }}>Hyresgäst</div>
       {[["Namn","name","text"],["E-post","email","text"],["Telefon","phone","text"]].map(([l,k,type])=><div key={k}><label style={labelStyle}>{l}</label><input type={type} value={editForm[k]||""} onChange={e=>setEditForm({...editForm,[k]:e.target.value})} style={inputStyle} /></div>)}
       <div style={{ display:"flex",gap:12 }}>
@@ -625,10 +629,14 @@ function Apartments({ propertyId, properties }) {
         <div style={{ flex:1 }}><label style={labelStyle}>Storlek (m²)</label><input type="number" value={addForm.sqm||""} onChange={e=>setAddForm({...addForm,sqm:e.target.value})} style={inputStyle} /></div>
         <div style={{ flex:1 }}><label style={labelStyle}>Hyra/mån</label><input type="number" value={addForm.rent||""} onChange={e=>setAddForm({...addForm,rent:e.target.value})} style={inputStyle} /></div>
       </div>
-      <div style={{ display:"flex",gap:16,marginBottom:14 }}>
+      <div style={{ display:"flex",gap:16,marginBottom:addForm.parking?6:14 }}>
         <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,fontWeight:600,color:"#444" }}><input type="checkbox" checked={!!addForm.balcony} onChange={e=>setAddForm({...addForm,balcony:e.target.checked})} style={{ width:16,height:16 }} /> 🌿 Balkong</label>
-        <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,fontWeight:600,color:"#444" }}><input type="checkbox" checked={!!addForm.parking} onChange={e=>setAddForm({...addForm,parking:e.target.checked})} style={{ width:16,height:16 }} /> 🚗 Parkering</label>
+        <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,fontWeight:600,color:"#444" }}><input type="checkbox" checked={!!addForm.parking} onChange={e=>setAddForm({...addForm,parking:e.target.checked,parking_cost:e.target.checked?addForm.parking_cost:null})} style={{ width:16,height:16 }} /> 🚗 Parkering</label>
       </div>
+      {addForm.parking&&<div style={{ marginBottom:14 }}>
+        <label style={labelStyle}>Parkeringskostnad (kr/mån)</label>
+        <input type="number" value={addForm.parking_cost||""} onChange={e=>setAddForm({...addForm,parking_cost:e.target.value?Number(e.target.value):null})} style={inputStyle} placeholder="0 = ingår i hyran" />
+      </div>}
       {[["Namn","name","text"],["E-post","email","text"],["Telefon","phone","text"]].map(([l,k,type])=><div key={k}><label style={labelStyle}>{l}</label><input type={type} value={addForm[k]||""} onChange={e=>setAddForm({...addForm,[k]:e.target.value})} style={inputStyle} /></div>)}
       <div style={{ display:"flex",gap:12 }}>
         <div style={{ flex:1 }}><label style={labelStyle}>Inflyttning</label><input type="date" value={addForm.move_in||""} onChange={e=>setAddForm({...addForm,move_in:e.target.value})} style={inputStyle} /></div>
