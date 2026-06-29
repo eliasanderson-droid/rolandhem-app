@@ -390,7 +390,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
     setSaving(false); setEditForm(null); onRefresh();
   }
 
-  const tabs = [["info","📋","Info"],["contracts","📄","Kontrakt"],["docs","🗂️","Dokument"],["issues","🔧","Felanmälan"],["inspections","🔍","Besiktning"]];
+  const tabs = [["info","📋","Info"],["docs","🗂️","Dokument"],["issues","🔧","Felanmälan"],["inspections","🔍","Besiktning"]];
 
   return <div>
     <button onClick={onBack} style={{ background:"none",border:"none",cursor:"pointer",color:"#6366f1",fontWeight:600,fontSize:14,padding:0,marginBottom:14 }}>← Tillbaka</button>
@@ -425,7 +425,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
       <Card>
         <h3 style={{ fontSize:14,fontWeight:700,color:G,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.05em" }}>Lägenhet</h3>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
-          {[["Lägenhetnr",tenant.unit||"–"],["Våning",tenant.floor!=null?`${tenant.floor} tr`:"–"],["Storlek",tenant.sqm?`${tenant.sqm} m²`:"–"],["Hyra/m²",tenant.sqm&&tenant.rent?`${Math.round(tenant.rent/tenant.sqm)} kr/m²`:"–"]].map(([l,v])=><div key={l}><div style={{ fontSize:11,color:"#aaa",textTransform:"uppercase",fontWeight:600 }}>{l}</div><div style={{ fontSize:15,fontWeight:700,color:G,marginTop:3 }}>{v}</div></div>)}
+          {[["Lägenhetnr",tenant.unit||"–"],["Våning",tenant.floor!=null?`${tenant.floor} tr`:"–"],["Storlek",tenant.sqm?`${tenant.sqm} m²`:"–"],["Hyra/m²/år",tenant.sqm&&tenant.rent?`${Math.round((tenant.rent*12)/tenant.sqm)} kr/m²`:"–"]].map(([l,v])=><div key={l}><div style={{ fontSize:11,color:"#aaa",textTransform:"uppercase",fontWeight:600 }}>{l}</div><div style={{ fontSize:15,fontWeight:700,color:G,marginTop:3 }}>{v}</div></div>)}
         </div>
         <div style={{ display:"flex",gap:10,marginTop:14 }}>
           {[["🌿","BALKONG",tenant.balcony],["🚗","PARKERING",tenant.parking]].map(([emoji,lbl,val])=><div key={lbl} style={{ display:"flex",alignItems:"center",gap:8,background:val?"#f0faf4":"#f5f5f5",border:`1px solid ${val?"#a7f3d0":"#e0e0e0"}`,borderRadius:8,padding:"8px 14px" }}>
@@ -445,7 +445,6 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
         {tenant.notes?<div style={{ fontSize:14,color:"#444",lineHeight:1.6 }}>{tenant.notes}</div>:<div style={{ fontSize:13,color:"#bbb",fontStyle:"italic" }}>Inga anteckningar.</div>}
       </Card>
     </div>}
-    {tab==="contracts"&&<ContractsPanel tenant={tenant} onRefresh={onRefresh} />}
     {tab==="docs"&&<Documents tenant={tenant} />}
     {tab==="issues"&&<TenantIssues tenant={tenant} />}
     {tab==="inspections"&&<Inspections tenant={tenant} />}
@@ -1089,7 +1088,7 @@ function RentLog({ propertyId, properties }) {
       tenant_id: t.id,
       old_rent: t.rent,
       new_rent: t.new_rent,
-      increase_pct: Number(pct),
+      increase_pct: t.rent ? Number(((t.new_rent - t.rent) / t.rent * 100).toFixed(1)) : Number(pct),
       effective_date: effectiveDate,
       reason: reason || null,
     }));
@@ -1183,11 +1182,25 @@ function RentLog({ propertyId, properties }) {
       {/* Preview */}
       {loading&&<div style={{ textAlign:"center",padding:16,color:"#aaa" }}>Beräknar…</div>}
       {!loading&&pct&&previewTenants.length>0&&<>
-        <div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8 }}>Förhandsgranskning</div>
+        <div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8 }}>
+          Förhandsgranskning – justera enskilda lägenheter
+        </div>
         <div style={{ background:"#f8f9fb",borderRadius:10,padding:12,marginBottom:14 }}>
-          {previewTenants.map(t=><div key={t.id} style={{ display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #eee",fontSize:14 }}>
-            <span style={{ color:"#444" }}>Lgh {t.unit} · {t.name||"Vakant"}</span>
-            <span><span style={{ color:"#888" }}>{fmt(t.rent)}</span> → <span style={{ fontWeight:700,color:G }}>{fmt(t.new_rent)}</span></span>
+          {previewTenants.map((t,i)=><div key={t.id} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #eee",gap:12 }}>
+            <div style={{ flex:1,minWidth:0 }}>
+              <div style={{ fontSize:13,fontWeight:600,color:G }}>Lgh {t.unit}</div>
+              <div style={{ fontSize:12,color:"#888" }}>{t.name||"Vakant"} · {fmt(t.rent)}</div>
+            </div>
+            <div style={{ display:"flex",alignItems:"center",gap:8,flexShrink:0 }}>
+              <span style={{ fontSize:12,color:"#aaa" }}>→</span>
+              <input
+                type="number"
+                value={t.new_rent}
+                onChange={e=>setPreviewTenants(prev=>prev.map((x,j)=>j===i?{...x,new_rent:Number(e.target.value)||x.new_rent}:x))}
+                style={{ width:90,padding:"5px 8px",borderRadius:6,border:"1px solid #c8e6c9",fontSize:14,fontWeight:700,color:G,textAlign:"right" }}
+              />
+              <span style={{ fontSize:12,color:"#aaa" }}>kr</span>
+            </div>
           </div>)}
           <div style={{ display:"flex",justifyContent:"space-between",marginTop:10,fontWeight:700,color:G,fontSize:15 }}>
             <span>Total ökning/mån</span>
