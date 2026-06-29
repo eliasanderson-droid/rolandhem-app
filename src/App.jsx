@@ -30,10 +30,14 @@ function Badge({ label, color="#888" }) {
   return <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:6, padding:"2px 10px", fontSize:12, fontWeight:600 }}>{label}</span>;
 }
 function Card({ children, style }) {
-  return <div style={{ background:"#fff", borderRadius:14, border:"1px solid #e8e8e8", padding:24, boxShadow:"0 1px 4px rgba(0,0,0,0.05)", ...style }}>{children}</div>;
+  return <div style={{ background:"#fff", borderRadius:16, border:"1px solid #efefef", padding:24, boxShadow:"0 1px 3px rgba(0,0,0,0.04)", ...style }}>{children}</div>;
 }
 function StatCard({ label, value, sub, color=G }) {
-  return <Card style={{ flex:1, minWidth:130, padding:16 }}><div style={{ fontSize:12, color:"#888", marginBottom:4 }}>{label}</div><div style={{ fontSize:24, fontWeight:700, color }}>{value}</div>{sub&&<div style={{ fontSize:11, color:"#aaa", marginTop:3 }}>{sub}</div>}</Card>;
+  return <Card style={{ flex:1, minWidth:130, padding:"16px 20px" }}>
+    <div style={{ fontSize:11, color:"#9ca3af", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>{label}</div>
+    <div style={{ fontSize:22, fontWeight:800, color, lineHeight:1.1 }}>{value}</div>
+    {sub&&<div style={{ fontSize:11, color:"#aaa", marginTop:5 }}>{sub}</div>}
+  </Card>;
 }
 function Modal({ title, children, onClose }) {
   return <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:20 }}>
@@ -136,15 +140,27 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty })
   const recent = [...issues].sort((a,b)=>(b.reported||"").localeCompare(a.reported||"")).slice(0,4);
   return <div>
     <h2 style={{ fontSize:22, fontWeight:700, color:G, marginBottom:20 }}>{selectedProperty?`Översikt – ${selectedProperty.name}`:"Översikt – Alla fastigheter"}</h2>
-    <div style={{ display:"grid", gridTemplateColumns:d?"repeat(3,1fr)":"repeat(2,1fr)", gap:16, marginBottom:16 }}>
+
+    {/* 4 primary KPI cards */}
+    <div style={{ display:"grid", gridTemplateColumns:d?"repeat(4,1fr)":"repeat(2,1fr)", gap:14, marginBottom:14 }}>
       <StatCard label="Hyresgäster" value={tenants.length} sub={`${properties.length} fastigheter`} />
       <StatCard label="Hyresintäkt/mån" value={fmt(totalRentMon)} color={G} />
       <StatCard label="Hyresintäkt/år" value={fmt(totalRentYear)} color={G} />
+      <StatCard label="Öppna ärenden" value={openIssues} color={openIssues>0?"#f59e0b":"#22c55e"} sub={openIssues===0?"Inga öppna ärenden":undefined} />
     </div>
-    <div style={{ display:"grid", gridTemplateColumns:d?"repeat(3,1fr)":"repeat(2,1fr)", gap:16, marginBottom:24 }}>
-      <StatCard label="Amortering/mån" value={fmt(totalAmorteringMon)} sub="baserat på proforma" color="#6366f1" />
-      <StatCard label="Amortering/år" value={fmt(totalAmorteringYear)} sub="baserat på proforma" color="#6366f1" />
-      <StatCard label="Öppna ärenden" value={openIssues} color="#f59e0b" />
+
+    {/* Secondary row - amortering */}
+    <div style={{ display:"grid", gridTemplateColumns:d?"repeat(2,1fr)":"repeat(2,1fr)", gap:14, marginBottom:24 }}>
+      <Card style={{ padding:"14px 18px", background:"#f0f4ff", border:"1px solid #c7d2fe" }}>
+        <div style={{ fontSize:12, color:"#6366f1", fontWeight:600, marginBottom:4 }}>AMORTERING / MÅN</div>
+        <div style={{ fontSize:20, fontWeight:800, color:"#4f46e5" }}>{fmt(totalAmorteringMon)}</div>
+        <div style={{ fontSize:11, color:"#818cf8", marginTop:2 }}>baserat på proforma</div>
+      </Card>
+      <Card style={{ padding:"14px 18px", background:"#f0f4ff", border:"1px solid #c7d2fe" }}>
+        <div style={{ fontSize:12, color:"#6366f1", fontWeight:600, marginBottom:4 }}>AMORTERING / ÅR</div>
+        <div style={{ fontSize:20, fontWeight:800, color:"#4f46e5" }}>{fmt(totalAmorteringYear)}</div>
+        <div style={{ fontSize:11, color:"#818cf8", marginTop:2 }}>baserat på proforma</div>
+      </Card>
     </div>
     <div style={{ display:"grid", gridTemplateColumns:d?"1fr 1fr":"1fr", gap:20 }}>
       <Card>
@@ -627,19 +643,24 @@ function Apartments({ propertyId, properties }) {
     </div>
     <input placeholder="Sök…" value={search} onChange={e=>setSearch(e.target.value)} style={{ width:"100%",padding:"10px 14px",borderRadius:10,border:"1px solid #e0e0e0",fontSize:14,marginBottom:16,boxSizing:"border-box" }} />
     <div style={{ display:"grid",gridTemplateColumns:d?"1fr 1fr":"1fr",gap:10 }}>
-      {filtered.map(t=><div key={t.id} onClick={()=>setSelected(t)} style={{ background:"#fff",borderRadius:12,border:"1px solid #e8e8e8",padding:"16px 20px",cursor:"pointer",display:"flex",alignItems:"center",gap:16,boxShadow:"0 1px 4px rgba(0,0,0,0.04)" }} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.04)"}>
-        <div style={{ background:G,color:"#6fcf97",borderRadius:10,padding:"6px 14px",fontWeight:800,fontSize:16,flexShrink:0 }}>{t.unit}</div>
+      {filtered.map(t=><div key={t.id} onClick={()=>setSelected(t)} style={{ background:"#fff",borderRadius:14,border:"1px solid #e8e8e8",padding:"14px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:14,boxShadow:"0 1px 3px rgba(0,0,0,0.04)",transition:"box-shadow 0.15s,transform 0.1s" }} onMouseEnter={e=>{ e.currentTarget.style.boxShadow="0 6px 20px rgba(0,0,0,0.1)"; e.currentTarget.style.transform="translateY(-1px)"; }} onMouseLeave={e=>{ e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"; e.currentTarget.style.transform="none"; }}>
+        <div style={{ background:G,color:"#6fcf97",borderRadius:10,padding:"6px 12px",fontWeight:800,fontSize:15,flexShrink:0,minWidth:40,textAlign:"center" }}>{t.unit}</div>
         <div style={{ flex:1,minWidth:0 }}>
-          <div style={{ fontWeight:700,fontSize:15,color:G }}>{t.name||<span style={{ color:"#bbb",fontStyle:"italic" }}>Ingen hyresgäst</span>}</div>
-          <div style={{ fontSize:12,color:"#aaa",marginTop:2 }}>{[t.email,t.sqm?`${t.sqm} m²`:null,t.floor!=null?`${t.floor} tr`:null,t.balcony?"🌿":null,t.parking?"🚗":null].filter(Boolean).join(" · ")}</div>
+          <div style={{ fontWeight:700,fontSize:14,color:G,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{t.name||<span style={{ color:"#bbb",fontStyle:"italic" }}>Ingen hyresgäst</span>}</div>
+          <div style={{ fontSize:11,color:"#aaa",marginTop:3,display:"flex",gap:6,flexWrap:"nowrap",overflow:"hidden" }}>
+            {t.sqm&&<span>{t.sqm} m²</span>}
+            {t.floor!=null&&<span>· {t.floor} tr</span>}
+            {t.balcony&&<span>· 🌿</span>}
+            {t.parking&&<span>· 🚗</span>}
+          </div>
         </div>
         <div style={{ textAlign:"right",flexShrink:0 }}>
-          <div style={{ fontWeight:700,fontSize:15,color:G }}>{fmt((t.rent||0)+(t.parking_cost||0))}</div>
-          <Badge label={t.status||"aktiv"} color={statusColor[t.status||"aktiv"]} />
+          <div style={{ fontWeight:700,fontSize:14,color:G }}>{fmt((t.rent||0)+(t.parking_cost||0))}</div>
+          <div style={{ marginTop:4 }}><Badge label={t.status||"aktiv"} color={statusColor[t.status||"aktiv"]} /></div>
         </div>
-        <div style={{ color:"#ccc",fontSize:20 }}>›</div>
+        <div style={{ color:"#d1d5db",fontSize:18 }}>›</div>
       </div>)}
-      {filtered.length===0&&<div style={{ gridColumn:"1/-1",textAlign:"center",padding:48,color:"#bbb" }}><div style={{ fontSize:40,marginBottom:10 }}>🏠</div><div>Inga lägenheter.</div></div>}
+      {filtered.length===0&&<div style={{ gridColumn:"1/-1",textAlign:"center",padding:"48px 24px",color:"#bbb",background:"#fafafa",borderRadius:12,border:"1px dashed #e8e8e8" }}><div style={{ fontSize:48,marginBottom:12,opacity:0.6 }}>🏠</div><div>Inga lägenheter.</div></div>}
     </div>
     {addForm&&<Modal title="Lägg till lägenhet" onClose={()=>setAddForm(null)}>
       <div style={{ display:"flex",gap:12 }}>
@@ -800,7 +821,7 @@ function PlannedMaintenance({ propertyId }) {
     <div style={{ display:"flex",gap:8,flexWrap:"wrap",marginBottom:20 }}>
       {["alla","utredning","planerad","pågående","genomförd","uppskjuten"].map(s=><button key={s} onClick={()=>setFilter(s)} style={{ padding:"5px 14px",borderRadius:20,border:"1px solid",borderColor:filter===s?G:"#e0e0e0",background:filter===s?G:"#fff",color:filter===s?"#fff":"#555",cursor:"pointer",fontWeight:600,fontSize:12,textTransform:"capitalize" }}>{s}</button>)}
     </div>
-    {filtered.length===0?<div style={{ textAlign:"center",padding:48,color:"#bbb" }}><div style={{ fontSize:40,marginBottom:10 }}>🏗️</div><div>Inga poster.</div></div>:
+    {filtered.length===0?<div style={{ textAlign:"center",padding:"48px 24px",color:"#bbb",background:"#fafafa",borderRadius:12,border:"1px dashed #e8e8e8" }}><div style={{ fontSize:48,marginBottom:12,opacity:0.6 }}>🏗️</div><div>Inga poster.</div></div>:
     Object.entries(byYear).map(([year,items])=>{
       const yc=items.reduce((s,p)=>s+(Number(p.estimated_cost)||0),0);
       return <div key={year} style={{ marginBottom:28 }}>
@@ -899,7 +920,7 @@ function Contacts() {
           <div><button onClick={()=>setForm({...c})} style={iconBtn}>✏️</button><button onClick={()=>remove(c.id)} style={iconBtn}>🗑️</button></div>
         </div>
       </Card>)}
-      {filtered.length===0&&<div style={{ gridColumn:"1/-1",textAlign:"center",padding:48,color:"#bbb" }}><div style={{ fontSize:40,marginBottom:10 }}>📇</div><div>Inga kontakter.</div></div>}
+      {filtered.length===0&&<div style={{ gridColumn:"1/-1",textAlign:"center",padding:"48px 24px",color:"#bbb",background:"#fafafa",borderRadius:12,border:"1px dashed #e8e8e8" }}><div style={{ fontSize:48,marginBottom:12,opacity:0.6 }}>📇</div><div>Inga kontakter.</div></div>}
     </div>
     {form&&<Modal title={form.id?"Redigera":"Ny kontakt"} onClose={()=>setForm(null)}>
       <label style={labelStyle}>Namn</label><input value={form.name||""} onChange={e=>setForm({...form,name:e.target.value})} style={inputStyle} />
@@ -982,8 +1003,8 @@ function Proforma({ propertyId }) {
     style={{ width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #c8e6c9",fontSize:14,fontWeight:600,color:G,textAlign:"right",boxSizing:"border-box" }}
   />;
 
-  if (!proforma&&!editing) return <div style={{ textAlign:"center",padding:48,color:"#bbb" }}>
-    <div style={{ fontSize:40,marginBottom:10 }}>📈</div>
+  if (!proforma&&!editing) return <div style={{ textAlign:"center",padding:"48px 24px",color:"#bbb",background:"#fafafa",borderRadius:12,border:"1px dashed #e8e8e8" }}>
+    <div style={{ fontSize:48,marginBottom:12,opacity:0.6 }}>📈</div>
     <div>Ingen proforma upplagd.</div>
     <button onClick={()=>{ setForm({...DEFAULTS}); setEditing(true); }} style={{ ...btnStyle(G),marginTop:16 }}>Lägg till proforma</button>
   </div>;
@@ -1160,8 +1181,8 @@ function RentLog({ propertyId, properties }) {
     </div>
 
     {/* History */}
-    {logs.length===0&&!form&&<Card style={{ textAlign:"center",padding:48,color:"#bbb" }}>
-      <div style={{ fontSize:40,marginBottom:10 }}>📈</div>
+    {logs.length===0&&!form&&<Card style={{ textAlign:"center",padding:"48px 24px",color:"#bbb",background:"#fafafa",borderRadius:12,border:"1px dashed #e8e8e8" }}>
+      <div style={{ fontSize:48,marginBottom:12,opacity:0.6 }}>📈</div>
       <div>Inga hyreshöjningar registrerade.</div>
     </Card>}
 
@@ -1606,13 +1627,14 @@ export default function App() {
                 <button onClick={e=>{ e.stopPropagation(); setEditPropertyForm({name:p.name,address:p.address}); setEditingPropertyId(p.id); }} style={{ background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,0.3)",fontSize:13,padding:"4px 6px",borderRadius:6,flexShrink:0 }}>✏️</button>
               </div>
             )}
-            {exp&&<div style={{ marginLeft:16,marginBottom:4 }}>
+            {exp&&<div style={{ marginLeft:12,marginBottom:6,borderLeft:"1px solid rgba(111,207,151,0.2)",paddingLeft:4 }}>
               {SUBTABS.map(st=>{
                 const isActive=nav.tab===st.id;
                 const stBadge=st.id==="maintenance"?allIssues.filter(i=>i.property_id===p.id&&i.status!=="åtgärdad").length:0;
-                return <button key={st.id} onClick={()=>goToTab(p.id,st.id)} style={{ display:"flex",alignItems:"center",gap:8,width:"100%",padding:"8px 12px 8px 14px",borderRadius:8,marginBottom:2,background:isActive?"rgba(111,207,151,0.15)":"rgba(255,255,255,0.03)",border:"none",borderLeft:isActive?"2px solid #6fcf97":"2px solid transparent",color:isActive?"#6fcf97":"rgba(255,255,255,0.45)",fontSize:13,fontWeight:isActive?700:400,cursor:"pointer",textAlign:"left" }}>
-                  <span style={{ fontSize:13 }}>{st.icon}</span><span style={{ flex:1 }}>{st.label}</span>
-                  {stBadge>0&&<span style={{ background:"#ef4444",color:"#fff",borderRadius:10,padding:"1px 6px",fontSize:10,fontWeight:700 }}>{stBadge}</span>}
+                return <button key={st.id} onClick={()=>goToTab(p.id,st.id)} style={{ display:"flex",alignItems:"center",gap:7,width:"100%",padding:"7px 10px 7px 12px",borderRadius:7,marginBottom:1,background:isActive?"rgba(111,207,151,0.18)":"transparent",border:"none",borderLeft:isActive?"2px solid #6fcf97":"2px solid transparent",color:isActive?"#6fcf97":"rgba(255,255,255,0.4)",fontSize:12,fontWeight:isActive?700:400,cursor:"pointer",textAlign:"left",transition:"background 0.1s" }}>
+                  <span style={{ fontSize:12,opacity:isActive?1:0.7 }}>{st.icon}</span>
+                  <span style={{ flex:1 }}>{st.label}</span>
+                  {stBadge>0&&<span style={{ background:"#ef4444",color:"#fff",borderRadius:10,padding:"1px 5px",fontSize:10,fontWeight:700 }}>{stBadge}</span>}
                 </button>;
               })}
             </div>}
@@ -1633,11 +1655,11 @@ export default function App() {
           <span style={{ display:"block",width:20,height:2,background:G,borderRadius:2 }} />
         </button>
         <div style={{ display:"flex",alignItems:"center",gap:10,flex:1 }}>
-          <img src={LOGO} alt="logo" style={{ width:52,height:52,objectFit:"contain",flexShrink:0 }} />
+          <img src={LOGO} alt="logo" style={{ width:40,height:40,objectFit:"contain",flexShrink:0 }} />
           <div style={{ fontWeight:800,fontSize:15,color:"#2d6a4f",letterSpacing:-0.3 }}>Rolandhem Fastigheter</div>
         </div>
       </div>
-      <div style={{ padding:24,flex:1 }}>
+      <div style={{ padding:isDesktop?"28px 32px":"16px",flex:1 }}>
         {nav.type==="overview"&&<Dashboard tenants={allTenants} contracts={allContracts} issues={allIssues} properties={properties} selectedProperty={null} />}
         {nav.type==="search"&&<GlobalSearch properties={properties} onNavigate={(tab,propId)=>{ setNav({type:"property",propertyId:propId,tab}); }} />}
         {nav.type==="contacts"&&<Contacts />}
