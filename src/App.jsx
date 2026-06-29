@@ -1028,12 +1028,254 @@ function Proforma({ propertyId }) {
 }
 
 // ── SUBTABS ────────────────────────────────────────────────────────────────────
+// ── RENT LOG ───────────────────────────────────────────────────────────────────
+function RentLog({ propertyId }) {
+  const [logs, setLogs] = useState([]);
+  const [tenants, setTenants] = useState([]);
+  const [form, setForm] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const d = useIsDesktop();
+
+  useEffect(() => { load(); }, [propertyId]);
+  async function load() {
+    const [lRes, tRes] = await Promise.all([
+      sb.from("rent_log").select("*").eq("property_id", propertyId).order("effective_date", {ascending:false}),
+      sb.from("tenants").select("id,unit,name,rent").eq("property_id", propertyId).order("unit"),
+    ]);
+    setLogs(lRes.data||[]); setTenants(tRes.data||[]); setLoading(false);
+  }
+  async function save() {
+    if (!form.tenant_id||!form.new_rent||!form.effective_date) return;
+    const tenant = tenants.find(t=>t.id===form.tenant_id);
+    const item = { ...form, property_id:propertyId, old_rent:tenant?.rent||0, new_rent:Number(form.new_rent), increase_pct: tenant?.rent ? ((Number(form.new_rent)-tenant.rent)/tenant.rent*100).toFixed(1) : 0 };
+    await sb.from("rent_log").insert([item]);
+    // Also update tenant's current rent
+    await sb.from("tenants").update({ rent:Number(form.new_rent) }).eq("id", form.tenant_id);
+    setForm(null); load();
+  }
+  async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("rent_log").delete().eq("id", id); load(); }
+
+  const blank = { tenant_id:"", new_rent:"", effective_date:new Date().toISOString().slice(0,10), reason:"", notes:"" };
+
+  if (loading) return <Spinner />;
+  return <div>
+    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
+      <h2 style={{ fontSize:22,fontWeight:700,color:G }}>Hyreshöjningar</h2>
+      <button onClick={()=>setForm(blank)} style={btnStyle(G)}>+ Registrera höjning</button>
+    </div>
+    {logs.length===0&&!form&&<Card style={{ textAlign:"center",padding:48,color:"#bbb" }}>
+      <div style={{ fontSize:40,marginBottom:10 }}>📈</div>
+      <div>Inga hyreshöjningar registrerade.</div>
+    </Card>}
+    <div style={{ display:"grid",gridTemplateColumns:d?"1fr 1fr":"1fr",gap:10,marginBottom:20 }}>
+      {logs.map(l=>{
+        const t=tenants.find(x=>x.id===l.tenant_id);
+        const pct=Number(l.increase_pct||0);
+        return <Card key={l.id} style={{ padding:16 }}>
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
+            <div>
+              <div style={{ fontWeight:700,fontSize:15,color:G }}>Lgh {t?.unit||"–"} · {t?.name||"–"}</div>
+              <div style={{ fontSize:12,color:"#aaa",marginTop:2 }}>Gäller från {l.effective_date}</div>
+              {l.reason&&<div style={{ fontSize:13,color:"#555",marginTop:6 }}>{l.reason}</div>}
+            </div>
+            <div style={{ textAlign:"right",flexShrink:0 }}>
+              <div style={{ fontSize:18,fontWeight:800,color:pct>0?"#22c55e":"#ef4444" }}>+{pct}%</div>
+              <div style={{ fontSize:12,color:"#888" }}>{fmt(l.old_rent)} → {fmt(l.new_rent)}</div>
+              <button onClick={()=>remove(l.id)} style={{...iconBtn,fontSize:12,color:"#ccc"}}>🗑️</button>
+            </div>
+          </div>
+        </Card>;
+      })}
+    </div>
+    {form&&<Modal title="Registrera hyreshöjning" onClose={()=>setForm(null)}>
+      <label style={labelStyle}>Lägenhet</label>
+      <select value={form.tenant_id} onChange={e=>setForm({...form,tenant_id:e.target.value,new_rent:tenants.find(t=>t.id===e.target.value)?.rent||""})} style={inputStyle}>
+        <option value="">– Välj lägenhet –</option>
+        {tenants.map(t=><option key={t.id} value={t.id}>Lgh {t.unit} – {t.name||"Vakant"} (nuv. {fmt(t.rent)})</option>)}
+      </select>
+      <div style={{ display:"flex",gap:12 }}>
+        <div style={{ flex:1 }}><label style={labelStyle}>Ny hyra (kr/mån)</label><input type="number" value={form.new_rent} onChange={e=>setForm({...form,new_rent:e.target.value})} style={inputStyle} /></div>
+        <div style={{ flex:1 }}><label style={labelStyle}>Gäller från</label><input type="date" value={form.effective_date} onChange={e=>setForm({...form,effective_date:e.target.value})} style={inputStyle} /></div>
+      </div>
+      {form.tenant_id&&form.new_rent&&<div style={{ background:"#e8f5e9",borderRadius:8,padding:"10px 14px",marginBottom:12,fontSize:14,color:G,fontWeight:600 }}>
+        Höjning: {fmt(tenants.find(t=>t.id===form.tenant_id)?.rent||0)} → {fmt(Number(form.new_rent))} 
+        ({((Number(form.new_rent)-(tenants.find(t=>t.id===form.tenant_id)?.rent||0))/(tenants.find(t=>t.id===form.tenant_id)?.rent||1)*100).toFixed(1)}%)
+      </div>}
+      <label style={labelStyle}>Anledning</label>
+      <input value={form.reason||""} onChange={e=>setForm({...form,reason:e.target.value})} style={inputStyle} placeholder="t.ex. Årlig indexhöjning 2025" />
+      <label style={labelStyle}>Anteckningar</label>
+      <textarea value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} style={{...inputStyle,height:60,resize:"vertical"}} />
+      <div style={{ display:"flex",gap:10 }}><button onClick={save} style={btnStyle(G)}>Spara</button><button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
+    </Modal>}
+  </div>;
+}
+
+// ── GLOBAL SEARCH ──────────────────────────────────────────────────────────────
+function GlobalSearch({ properties, onNavigate }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function search() {
+    if (!query.trim()) return;
+    setLoading(true);
+    const q = query.toLowerCase();
+    const [tRes, iRes, cRes] = await Promise.all([
+      sb.from("tenants").select("*"),
+      sb.from("issues").select("*"),
+      sb.from("contacts").select("*"),
+    ]);
+    const tenants = (tRes.data||[]).filter(t => (t.name||"").toLowerCase().includes(q)||(t.unit||"").toLowerCase().includes(q)||(t.email||"").toLowerCase().includes(q)||(t.phone||"").toLowerCase().includes(q));
+    const issues = (iRes.data||[]).filter(i => (i.title||"").toLowerCase().includes(q)||(i.description||"").toLowerCase().includes(q)||(i.unit||"").toLowerCase().includes(q));
+    const contacts = (cRes.data||[]).filter(c => (c.name||"").toLowerCase().includes(q)||(c.contact_person||"").toLowerCase().includes(q)||(c.phone||"").toLowerCase().includes(q));
+    setResults({ tenants, issues, contacts });
+    setLoading(false);
+  }
+
+  return <div>
+    <h2 style={{ fontSize:22,fontWeight:700,color:G,marginBottom:20 }}>🔍 Sök</h2>
+    <div style={{ display:"flex",gap:10,marginBottom:24 }}>
+      <input
+        value={query} onChange={e=>setQuery(e.target.value)}
+        onKeyDown={e=>e.key==="Enter"&&search()}
+        placeholder="Sök på hyresgäst, lägenhet, ärende, kontakt…"
+        style={{ flex:1,padding:"12px 16px",borderRadius:10,border:"1px solid #e0e0e0",fontSize:15,boxSizing:"border-box" }}
+        autoFocus
+      />
+      <button onClick={search} style={{ ...btnStyle(G),padding:"12px 24px",fontSize:15 }}>{loading?"…":"Sök"}</button>
+    </div>
+    {results&&<>
+      {results.tenants.length===0&&results.issues.length===0&&results.contacts.length===0&&
+        <div style={{ textAlign:"center",padding:48,color:"#aaa" }}>Inga resultat för "{query}"</div>}
+
+      {results.tenants.length>0&&<div style={{ marginBottom:24 }}>
+        <div style={{ fontSize:12,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10 }}>🏠 Hyresgäster ({results.tenants.length})</div>
+        {results.tenants.map(t=>{
+          const prop=properties.find(p=>p.id===t.property_id);
+          return <Card key={t.id} style={{ padding:14,marginBottom:8,cursor:"pointer" }} onClick={()=>onNavigate("tenants",t.property_id)}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+              <div>
+                <div style={{ fontWeight:700,color:G }}>{t.name||"Vakant"} · Lgh {t.unit}</div>
+                <div style={{ fontSize:12,color:"#888",marginTop:2 }}>{prop?.name} · {fmt(t.rent)}/mån</div>
+              </div>
+              <span style={{ color:"#ccc",fontSize:20 }}>›</span>
+            </div>
+          </Card>;
+        })}
+      </div>}
+
+      {results.issues.length>0&&<div style={{ marginBottom:24 }}>
+        <div style={{ fontSize:12,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10 }}>🔧 Felanmälningar ({results.issues.length})</div>
+        {results.issues.map(i=>{
+          const prop=properties.find(p=>p.id===i.property_id);
+          return <Card key={i.id} style={{ padding:14,marginBottom:8,cursor:"pointer" }} onClick={()=>onNavigate("maintenance",i.property_id)}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+              <div>
+                <div style={{ fontWeight:700,color:G }}>{i.title}</div>
+                <div style={{ fontSize:12,color:"#888",marginTop:2 }}>{prop?.name} · Lgh {i.unit} · {i.reported}</div>
+              </div>
+              <Badge label={i.status} color={statusColor[i.status]} />
+            </div>
+          </Card>;
+        })}
+      </div>}
+
+      {results.contacts.length>0&&<div style={{ marginBottom:24 }}>
+        <div style={{ fontSize:12,fontWeight:700,color:"#888",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10 }}>📇 Kontakter ({results.contacts.length})</div>
+        {results.contacts.map(c=><Card key={c.id} style={{ padding:14,marginBottom:8 }}>
+          <div style={{ fontWeight:700,color:G }}>{c.name}</div>
+          <div style={{ fontSize:12,color:"#888",marginTop:2 }}>{c.category}{c.phone&&` · ${c.phone}`}{c.contact_person&&` · ${c.contact_person}`}</div>
+        </Card>)}
+      </div>}
+    </>}
+  </div>;
+}
+
+// ── EXPORT ─────────────────────────────────────────────────────────────────────
+function ExportPanel({ propertyId, properties }) {
+  const [loading, setLoading] = useState(false);
+  const prop = properties.find(p=>p.id===propertyId);
+
+  async function exportCSV(type) {
+    setLoading(true);
+    let data = [], headers = [], filename = "";
+
+    if (type==="tenants") {
+      const res = await sb.from("tenants").select("*").eq("property_id", propertyId).order("unit");
+      headers = ["Lägenhet","Namn","E-post","Telefon","Hyra","m²","Våning","Balkong","Parkering","Inflyttning","Kontraktsslut","Status"];
+      data = (res.data||[]).map(t=>[t.unit,t.name,t.email,t.phone,t.rent,t.sqm,t.floor,t.balcony?"Ja":"Nej",t.parking?"Ja":"Nej",t.move_in,t.lease_end||"Tillsvidare",t.status]);
+      filename = `lägenheter-${prop?.name}-${new Date().toISOString().slice(0,10)}.csv`;
+    } else if (type==="issues") {
+      const res = await sb.from("issues").select("*").eq("property_id", propertyId).order("reported", {ascending:false});
+      headers = ["Lägenhet","Rubrik","Beskrivning","Prioritet","Status","Anmält","Tilldelad"];
+      data = (res.data||[]).map(i=>[i.unit,i.title,i.description,i.priority,i.status,i.reported,i.assignee]);
+      filename = `felanmälningar-${prop?.name}-${new Date().toISOString().slice(0,10)}.csv`;
+    } else if (type==="planned") {
+      const res = await sb.from("planned_maintenance").select("*").eq("property_id", propertyId).order("planned_year");
+      headers = ["År","Titel","Kategori","Beskrivning","Beräknad kostnad","Status","Entreprenör"];
+      data = (res.data||[]).map(p=>[p.planned_year,p.title,p.category,p.description,p.estimated_cost,p.status,p.contractor]);
+      filename = `underhåll-${prop?.name}-${new Date().toISOString().slice(0,10)}.csv`;
+    } else if (type==="rentlog") {
+      const [lRes, tRes] = await Promise.all([
+        sb.from("rent_log").select("*").eq("property_id", propertyId).order("effective_date", {ascending:false}),
+        sb.from("tenants").select("id,unit,name").eq("property_id", propertyId),
+      ]);
+      const tenants = tRes.data||[];
+      headers = ["Lägenhet","Hyresgäst","Gammal hyra","Ny hyra","Höjning %","Gäller från","Anledning"];
+      data = (lRes.data||[]).map(l=>{ const t=tenants.find(x=>x.id===l.tenant_id); return [t?.unit,t?.name,l.old_rent,l.new_rent,l.increase_pct+"%",l.effective_date,l.reason]; });
+      filename = `hyreshöjningar-${prop?.name}-${new Date().toISOString().slice(0,10)}.csv`;
+    }
+
+    // Build CSV with BOM for Swedish chars in Excel
+    const BOM = "\uFEFF";
+    const csv = BOM + [headers, ...data].map(row=>row.map(v=>`"${(v||"").toString().replace(/"/g,'""')}"`).join(";")).join("\n");
+    const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download=filename; a.click();
+    URL.revokeObjectURL(url);
+    setLoading(false);
+  }
+
+  const exports = [
+    { type:"tenants", icon:"🏠", label:"Lägenheter & hyresgäster", desc:"Alla lägenheter med hyresgästinfo, hyra, m² och status" },
+    { type:"issues", icon:"🔧", label:"Felanmälningar", desc:"Alla ärenden med status, prioritet och tilldelning" },
+    { type:"planned", icon:"🏗️", label:"Planerat underhåll", desc:"Underhållsplan med kostnader och status per år" },
+    { type:"rentlog", icon:"📈", label:"Hyreshöjningslogg", desc:"Historik över alla hyreshöjningar med procent" },
+  ];
+
+  return <div>
+    <h2 style={{ fontSize:22,fontWeight:700,color:G,marginBottom:8 }}>Exportera</h2>
+    <div style={{ fontSize:14,color:"#888",marginBottom:24 }}>Ladda ner data som CSV-fil – öppnas direkt i Excel.</div>
+    <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+      {exports.map(e=><Card key={e.type} style={{ padding:18 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <div style={{ display:"flex",gap:14,alignItems:"center",flex:1 }}>
+            <div style={{ width:48,height:48,borderRadius:12,background:"#f0faf4",border:"1px solid #c8e6c9",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0 }}>{e.icon}</div>
+            <div>
+              <div style={{ fontWeight:700,fontSize:15,color:G }}>{e.label}</div>
+              <div style={{ fontSize:13,color:"#888",marginTop:2 }}>{e.desc}</div>
+            </div>
+          </div>
+          <button onClick={()=>exportCSV(e.type)} disabled={loading} style={{ ...btnStyle(G),flexShrink:0,marginLeft:16 }}>
+            ⬇️ Ladda ner
+          </button>
+        </div>
+      </Card>)}
+    </div>
+    <div style={{ marginTop:20,padding:"14px 18px",background:"#f8f9fb",borderRadius:10,fontSize:13,color:"#666" }}>
+      💡 <strong>Tips:</strong> Öppna filen i Excel → välj "Avgränsad" → välj semikolon (;) som avgränsare så visas kolumnerna rätt.
+    </div>
+  </div>;
+}
+
 const SUBTABS = [
   { id:"overview", label:"Översikt", icon:"📊" },
   { id:"tenants", label:"Lägenheter", icon:"🏠" },
   { id:"maintenance", label:"Felanmälan", icon:"🔧" },
   { id:"planned", label:"Planerat underhåll", icon:"🏗️" },
-  { id:"proforma", label:"Proforma", icon:"📈" },
+  { id:"rentlog", label:"Hyreshöjningar", icon:"📈" },
+  { id:"proforma", label:"Proforma", icon:"💰" },
+  { id:"export", label:"Exportera", icon:"⬇️" },
 ];
 
 // ── APP ────────────────────────────────────────────────────────────────────────
@@ -1087,6 +1329,7 @@ export default function App() {
   function goToTab(id, tab) { setNav({ type:"property", propertyId:id, tab }); setSidebarOpen(false); }
   function goOverview() { setNav({ type:"overview" }); setSidebarOpen(false); }
   function goContacts() { setNav({ type:"contacts" }); setSidebarOpen(false); }
+  function goSearch() { setNav({ type:"search" }); setSidebarOpen(false); }
 
   async function saveProperty(id, data) {
     await sb.from("properties").update(data).eq("id", id);
@@ -1128,6 +1371,7 @@ export default function App() {
       </div>
       <nav style={{ flex:1, padding:"14px 0", overflowY:"auto" }}>
         <NavRow icon="🏙️" label="Översikt" active={nav.type==="overview"} onClick={goOverview} />
+        <NavRow icon="🔍" label="Sök" active={nav.type==="search"} onClick={goSearch} />
         <NavRow icon="📇" label="Kontakter" active={nav.type==="contacts"} onClick={goContacts} />
         <div style={{ margin:"10px 16px 6px", fontSize:10, fontWeight:700, color:"rgba(255,255,255,0.25)", textTransform:"uppercase", letterSpacing:"0.1em" }}>Fastigheter</div>
         {properties.map(p=>{
@@ -1183,12 +1427,15 @@ export default function App() {
       </div>
       <div style={{ padding:24,flex:1 }}>
         {nav.type==="overview"&&<Dashboard tenants={allTenants} contracts={allContracts} issues={allIssues} properties={properties} selectedProperty={null} />}
+        {nav.type==="search"&&<GlobalSearch properties={properties} onNavigate={(tab,propId)=>{ setNav({type:"property",propertyId:propId,tab}); }} />}
         {nav.type==="contacts"&&<Contacts />}
         {nav.type==="property"&&nav.tab==="overview"&&selectedProperty&&<Dashboard tenants={filteredTenants} contracts={filteredContracts} issues={filteredIssues} properties={properties} selectedProperty={selectedProperty} />}
         {nav.type==="property"&&nav.tab==="tenants"&&selectedProperty&&<Apartments propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="maintenance"&&selectedProperty&&<Maintenance propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="planned"&&selectedProperty&&<PlannedMaintenance propertyId={selectedProperty.id} />}
+        {nav.type==="property"&&nav.tab==="rentlog"&&selectedProperty&&<RentLog propertyId={selectedProperty.id} />}
         {nav.type==="property"&&nav.tab==="proforma"&&selectedProperty&&<Proforma propertyId={selectedProperty.id} />}
+        {nav.type==="property"&&nav.tab==="export"&&selectedProperty&&<ExportPanel propertyId={selectedProperty.id} properties={properties} />}
       </div>
     </main>
     {showAddProp&&<Modal title="Lägg till fastighet" onClose={()=>setShowAddProp(false)}>
