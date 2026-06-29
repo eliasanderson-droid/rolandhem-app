@@ -903,7 +903,7 @@ function Proforma({ propertyId }) {
   const [saving, setSaving] = useState(false);
 
   const DEFAULTS = {
-    antalLgh:0, antalKvm:0, kopeskilling:0, egenInsats:0, belaaning:0, ranta:3.8,
+    antalLgh:0, antalKvm:0, kopeskilling:0, egenInsats:0, belaaning:0, ranta:3.8, amorteringsprocent:4.0,
     hyresintakter:0, fastighetsskatt:0, skattesats:20.6, avskrivningsprocent:2.0,
     taxVardeByggnad:0, taxVardeMark:0,
     driftkostnader:{ varme:0, vattenAvlopp:0, sophantning:0, fastighetsel:0, fastighetsSkotsel:0, snorojning:0, forsakring:0, reparationer:0, langsiktigtUnderhall:0 }
@@ -911,8 +911,8 @@ function Proforma({ propertyId }) {
 
   // Seed data
   const SEEDS = {
-    1: { antalLgh:8,antalKvm:613,kopeskilling:8000000,egenInsats:2000000,belaaning:6000000,ranta:3.8,hyresintakter:820000,driftkostnader:{varme:135000,vattenAvlopp:90000,sophantning:17000,fastighetsel:66000,fastighetsSkotsel:5000,snorojning:6130,forsakring:14000,reparationer:30650,langsiktigtUnderhall:42910},fastighetsskatt:13792,skattesats:20.6,avskrivningsprocent:2.0,taxVardeByggnad:5400000,taxVardeMark:1672000 },
-    2: { antalLgh:8,antalKvm:614,kopeskilling:7923000,egenInsats:2000000,belaaning:6279535,ranta:3.8,hyresintakter:764599,driftkostnader:{varme:0,vattenAvlopp:24560,sophantning:9210,fastighetsel:18420,fastighetsSkotsel:27630,snorojning:18420,forsakring:12280,reparationer:30700,langsiktigtUnderhall:42980},fastighetsskatt:13792,skattesats:20.6,avskrivningsprocent:2.0,taxVardeByggnad:4051000,taxVardeMark:997000 }
+    1: { antalLgh:8,antalKvm:613,kopeskilling:8000000,egenInsats:2000000,belaaning:6000000,ranta:3.8,amorteringsprocent:4.0,hyresintakter:820000,driftkostnader:{varme:135000,vattenAvlopp:90000,sophantning:17000,fastighetsel:66000,fastighetsSkotsel:5000,snorojning:6130,forsakring:14000,reparationer:30650,langsiktigtUnderhall:42910},fastighetsskatt:13792,skattesats:20.6,avskrivningsprocent:2.0,taxVardeByggnad:5400000,taxVardeMark:1672000 },
+    2: { antalLgh:8,antalKvm:614,kopeskilling:7923000,egenInsats:2000000,belaaning:6279535,ranta:3.8,amorteringsprocent:4.0,hyresintakter:764599,driftkostnader:{varme:0,vattenAvlopp:24560,sophantning:9210,fastighetsel:18420,fastighetsSkotsel:27630,snorojning:18420,forsakring:12280,reparationer:30700,langsiktigtUnderhall:42980},fastighetsskatt:13792,skattesats:20.6,avskrivningsprocent:2.0,taxVardeByggnad:4051000,taxVardeMark:997000 }
   };
 
   useEffect(() => { load(); }, [propertyId]);
@@ -940,10 +940,13 @@ function Proforma({ propertyId }) {
   const totalTax = (d2.taxVardeByggnad||0) + (d2.taxVardeMark||0);
   const bokfortByggnad = totalTax ? (d2.taxVardeByggnad||0) * ((d2.kopeskilling||0) / totalTax) : 0;
   const avskrivning = bokfortByggnad * ((d2.avskrivningsprocent||0) / 100);
+  const amortering = (d2.belaaning||0) * ((d2.amorteringsprocent||0) / 100);
   const resForeskatt = driftnetto - avskrivning - ranta;
   const skatt = resForeskatt > 0 ? resForeskatt * ((d2.skattesats||0) / 100) : 0;
   const kassaflode = (resForeskatt - skatt) + avskrivning;
+  const kassaflodeEfterAmortering = kassaflode - amortering;
   const avkastnEgetKap = d2.egenInsats ? (kassaflode / d2.egenInsats) * 100 : 0;
+  const avkastnEgetKapEfterAmortering = d2.egenInsats ? (kassaflodeEfterAmortering / d2.egenInsats) * 100 : 0;
 
   const Section = ({title,children}) => <div style={{ marginBottom:24 }}><div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12,paddingBottom:6,borderBottom:`2px solid #e8f5e9` }}>{title}</div>{children}</div>;
   const Row = ({label,value,highlight,sub}) => <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f5f5f5" }}>
@@ -971,7 +974,7 @@ function Proforma({ propertyId }) {
       :<div style={{ display:"flex",gap:8 }}><button onClick={()=>saveProforma(form)} disabled={saving} style={btnStyle(G)}>{saving?"Sparar…":"💾 Spara"}</button><button onClick={()=>{ setEditing(false); setForm(null); }} style={btnStyle("#888")}>Avbryt</button></div>}
     </div>
     <div style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12,marginBottom:24 }}>
-      {[{label:"Driftnetto",value:fmtKkr(driftnetto),sub:"Intäkter – drift – skatt",color:G},{label:"Direktavkastning",value:fmtPct(driftnettoProc),sub:"Driftnetto / köpeskilling",color:driftnettoProc>=5?"#22c55e":"#f59e0b"},{label:"Kassaflöde",value:fmtKkr(kassaflode),sub:"Efter skatt + avskrivning",color:kassaflode>0?"#22c55e":"#ef4444"},{label:"Avkastning EK",value:fmtPct(avkastnEgetKap),sub:"Kassaflöde / eget kapital",color:avkastnEgetKap>=8?"#22c55e":"#f59e0b"}].map(k=><Card key={k.label} style={{ padding:16 }}>
+      {[{label:"Driftnetto",value:fmtKkr(driftnetto),sub:"Intäkter – drift – skatt",color:G},{label:"Direktavkastning",value:fmtPct(driftnettoProc),sub:"Driftnetto / köpeskilling",color:driftnettoProc>=5?"#22c55e":"#f59e0b"},{label:"Kassaflöde",value:fmtKkr(kassaflode),sub:"Efter skatt + avskrivning",color:kassaflode>0?"#22c55e":"#ef4444"},{label:"Kassaflöde efter amortering",value:fmtKkr(kassaflodeEfterAmortering),sub:`${fmtPct(d2.amorteringsprocent||0)} amortering`,color:kassaflodeEfterAmortering>0?"#22c55e":"#ef4444"},{label:"Avkastning EK",value:fmtPct(avkastnEgetKap),sub:"Kassaflöde / eget kapital",color:avkastnEgetKap>=8?"#22c55e":"#f59e0b"}].map(k=><Card key={k.label} style={{ padding:16 }}>
         <div style={{ fontSize:12,color:"#888",marginBottom:4 }}>{k.label}</div>
         <div style={{ fontSize:24,fontWeight:800,color:k.color }}>{k.value}</div>
         <div style={{ fontSize:11,color:"#aaa",marginTop:3 }}>{k.sub}</div>
@@ -993,6 +996,7 @@ function Proforma({ propertyId }) {
           {editing?<div>
             {[["Köpeskilling","kopeskilling"],["Eget kapital","egenInsats"],["Belåning","belaaning"]].map(([l,k])=><div key={k} style={{ marginBottom:8 }}><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>{l}</label>{numIn(form[k],v=>setForm({...form,[k]:Number(v)||0}))}</div>)}
             <div style={{ marginBottom:8 }}><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>Ränta (%)</label>{numIn(form.ranta,v=>setForm({...form,ranta:Number(v)||0}))}</div>
+            <div style={{ marginBottom:8 }}><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>Amortering (%)</label>{numIn(form.amorteringsprocent??4,v=>setForm({...form,amorteringsprocent:Number(v)||0}))}</div>
           </div>:<>
             <Row label="Köpeskilling" value={fmtKkr(d2.kopeskilling||0)} />
             <Row label="Eget kapital" value={fmtKkr(d2.egenInsats||0)} sub={d2.kopeskilling?fmtPct((d2.egenInsats||0)/(d2.kopeskilling||1)*100)+" av köpeskillingen":""} />
@@ -1014,6 +1018,9 @@ function Proforma({ propertyId }) {
           <Row label="Resultat före skatt" value={fmtKkr(resForeskatt)} />
           <Row label={"Skatt ("+fmtPct(d2.skattesats||0)+")"} value={"– "+fmtKkr(skatt)} />
           <Row label="Kassaflöde" value={fmtKkr(kassaflode)} highlight />
+          <div style={{ marginTop:8 }} />
+          <Row label={`Amortering (${fmtPct(d2.amorteringsprocent||0)} på lån)`} value={"– "+fmtKkr(amortering)} sub={fmtKkr(d2.belaaning||0)+" i belåning"} />
+          <Row label="Kassaflöde efter amortering" value={fmtKkr(kassaflodeEfterAmortering)} highlight />
         </Section>
       </div>
     </div>
@@ -1032,6 +1039,7 @@ function Proforma({ propertyId }) {
         <div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8 }}>Övriga antaganden</div>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
           <div><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>Avskrivning (%)</label>{numIn(form.avskrivningsprocent,v=>setForm({...form,avskrivningsprocent:Number(v)||0}))}</div>
+          <div><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>Amortering (%)</label>{numIn(form.amorteringsprocent??4,v=>setForm({...form,amorteringsprocent:Number(v)||0}))}</div>
           <div><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>Skattesats (%)</label>{numIn(form.skattesats,v=>setForm({...form,skattesats:Number(v)||0}))}</div>
           <div><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>Taxvärde byggnad</label>{numIn(form.taxVardeByggnad,v=>setForm({...form,taxVardeByggnad:Number(v)||0}))}</div>
           <div><label style={{ fontSize:11,color:"#888",display:"block",marginBottom:3 }}>Taxvärde mark</label>{numIn(form.taxVardeMark,v=>setForm({...form,taxVardeMark:Number(v)||0}))}</div>
