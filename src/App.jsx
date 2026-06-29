@@ -181,6 +181,8 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     const a=document.createElement("a");a.href=url;a.download=`felanmälan-${(issue.title||"arende").replace(/\s+/g,"-")}.html`;a.click();
     URL.revokeObjectURL(url);
   }
+
+  async function openIssueForm() {
     const propId = selectedProperty?.id || properties[0]?.id;
     const { data } = await sb.from("tenants").select("id,unit,name,property_id").order("unit");
     setPropTenants(data||[]);
