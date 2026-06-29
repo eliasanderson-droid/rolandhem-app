@@ -1169,7 +1169,7 @@ function RentLog({ propertyId, properties }) {
       <div style={{ display:"flex",gap:12 }}>
         <div style={{ flex:1 }}>
           <label style={labelStyle}>Höjning (%)</label>
-          <input type="number" value={pct} onChange={e=>setPct(e.target.value)} style={inputStyle} placeholder="t.ex. 4.5" step="0.1" />
+          <input type="text" inputMode="decimal" value={pct} onChange={e=>setPct(e.target.value.replace(",","."))} style={inputStyle} placeholder="t.ex. 4.5" />
         </div>
         <div style={{ flex:1 }}>
           <label style={labelStyle}>Gäller från</label>
@@ -1182,7 +1182,7 @@ function RentLog({ propertyId, properties }) {
 
       {/* Preview */}
       {loading&&<div style={{ textAlign:"center",padding:16,color:"#aaa" }}>Beräknar…</div>}
-      {!loading&&previewTenants.length>0&&<>
+      {!loading&&pct&&previewTenants.length>0&&<>
         <div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8 }}>Förhandsgranskning</div>
         <div style={{ background:"#f8f9fb",borderRadius:10,padding:12,marginBottom:14 }}>
           {previewTenants.map(t=><div key={t.id} style={{ display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #eee",fontSize:14 }}>
@@ -1190,22 +1190,24 @@ function RentLog({ propertyId, properties }) {
             <span><span style={{ color:"#888" }}>{fmt(t.rent)}</span> → <span style={{ fontWeight:700,color:G }}>{fmt(t.new_rent)}</span></span>
           </div>)}
           <div style={{ display:"flex",justifyContent:"space-between",marginTop:10,fontWeight:700,color:G,fontSize:15 }}>
-            <span>Total hyresökning/mån</span>
+            <span>Total ökning/mån</span>
             <span>+{fmt(previewTenants.reduce((s,t)=>s+(t.new_rent-t.rent),0))}</span>
           </div>
         </div>
 
-        <label style={{ display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",marginBottom:16,padding:"12px 14px",background:applyToTenants?"#e8f5e9":"#f5f5f5",borderRadius:10,border:`1px solid ${applyToTenants?"#a7f3d0":"#e0e0e0"}` }}>
-          <input type="checkbox" checked={applyToTenants} onChange={e=>setApplyToTenants(e.target.checked)} style={{ width:18,height:18,marginTop:2,flexShrink:0 }} />
-          <div>
-            <div style={{ fontWeight:700,fontSize:14,color:G }}>Uppdatera hyran på alla lägenheter</div>
-            <div style={{ fontSize:12,color:"#888",marginTop:2 }}>Bockar du i detta uppdateras hyran direkt på varje lägenhet från {effectiveDate}. Avbockar du sparas bara historiken utan att hyran ändras.</div>
-          </div>
-        </label>
+        <div style={{ marginBottom:16,padding:"14px 16px",background:applyToTenants?"#e8f5e9":"#f5f5f5",borderRadius:10,border:`1px solid ${applyToTenants?"#a7f3d0":"#e0e0e0"}` }}>
+          <label style={{ display:"flex",alignItems:"flex-start",gap:12,cursor:"pointer" }}>
+            <input type="checkbox" checked={applyToTenants} onChange={e=>setApplyToTenants(e.target.checked)} style={{ width:20,height:20,marginTop:2,flexShrink:0,cursor:"pointer" }} />
+            <div>
+              <div style={{ fontWeight:700,fontSize:14,color:G }}>Uppdatera hyran på alla lägenheter</div>
+              <div style={{ fontSize:12,color:"#888",marginTop:4 }}>Ikryssad = hyran uppdateras direkt på varje lägenhet. Urbockad = bara historik sparas utan att hyran ändras.</div>
+            </div>
+          </label>
+        </div>
       </>}
 
       <div style={{ display:"flex",gap:10 }}>
-        <button onClick={save} disabled={saving||previewTenants.length===0} style={{ ...btnStyle(G),opacity:previewTenants.length===0?0.5:1 }}>{saving?"Sparar…":"Spara höjning"}</button>
+        <button onClick={save} disabled={saving||!pct||previewTenants.length===0} style={{ ...btnStyle(G),opacity:(!pct||previewTenants.length===0)?0.4:1,cursor:(!pct||previewTenants.length===0)?"not-allowed":"pointer" }}>{saving?"Sparar…":"💾 Spara höjning"}</button>
         <button onClick={()=>{ setForm(null); setPct(""); setReason(""); setPreviewTenants([]); }} style={btnStyle("#888")}>Avbryt</button>
       </div>
     </Modal>}
