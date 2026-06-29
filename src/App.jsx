@@ -135,10 +135,21 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     setShowIssueForm(true);
   }
 
+  async function openEditIssue(issue) {
+    const { data } = await sb.from("tenants").select("id,unit,name,property_id").order("unit");
+    setPropTenants(data||[]);
+    setIssueForm({...issue, _editing:true});
+  }
+
   async function saveIssue() {
     if (!issueForm.title) return;
     setSaving(true);
-    await sb.from("issues").insert([issueForm]);
+    if (issueForm._editing && issueForm.id) {
+      const { _editing, ...item } = issueForm;
+      await sb.from("issues").update(item).eq("id", issueForm.id);
+    } else {
+      await sb.from("issues").insert([issueForm]);
+    }
     setSaving(false); setShowIssueForm(false); setIssueForm(null);
     if (onIssueAdded) onIssueAdded();
   }
@@ -161,9 +172,6 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
   return <div>
     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
       <h2 style={{ fontSize:22, fontWeight:700, color:G }}>{selectedProperty?`Översikt – ${selectedProperty.name}`:"Översikt – Alla fastigheter"}</h2>
-      <button onClick={openIssueForm} style={{ display:"flex", alignItems:"center", gap:8, background:G, color:"#fff", border:"none", borderRadius:10, padding:"10px 18px", cursor:"pointer", fontWeight:700, fontSize:14, boxShadow:"0 2px 8px rgba(26,61,43,0.3)" }}>
-        <span style={{ fontSize:18, lineHeight:1 }}>+</span> Ny felanmälan
-      </button>
     </div>
 
     {/* 4 primary KPI cards */}
@@ -200,47 +208,65 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
         })}
       </Card>
       <Card>
-        <h3 style={{ fontSize:15, fontWeight:700, color:G, marginBottom:16 }}>Senaste felanmälningar</h3>
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          {recent.length===0?<div style={{ color:"#aaa" }}>Inga ärenden.</div>:recent.map(i=><div key={i.id} style={{ borderLeft:`3px solid ${priorityColor[i.priority]}`, paddingLeft:12 }}>
-            <div style={{ fontWeight:600, color:G }}>{i.title}</div>
-            <div style={{ fontSize:12, color:"#888", marginTop:2 }}>{i.reported} · <Badge label={i.status} color={statusColor[i.status]} /></div>
-          </div>)}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <h3 style={{ fontSize:15, fontWeight:700, color:G }}>Senaste felanmälningar</h3>
+          <button onClick={openIssueForm} title="Ny felanmälan" style={{ width:32, height:32, borderRadius:"50%", background:G, color:"#fff", border:"none", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 2px 6px rgba(26,61,43,0.3)", lineHeight:1 }}>+</button>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {recent.length===0?<div style={{ color:"#aaa" }}>Inga ärenden.</div>:recent.map(i=>{
+            const prop=properties.find(p=>p.id===i.property_id);
+            return <div key={i.id} onClick={()=>openEditIssue(i)} style={{ borderLeft:`3px solid ${priorityColor[i.priority]}`, paddingLeft:12, cursor:"pointer", padding:"8px 12px", borderRadius:8, background:"#fafafa", borderLeft:`3px solid ${priorityColor[i.priority]}`, transition:"background 0.1s" }} onMouseEnter={e=>e.currentTarget.style.background="#f0faf4"} onMouseLeave={e=>e.currentTarget.style.background="#fafafa"}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                <div style={{ fontWeight:600, color:G, fontSize:14 }}>{i.title}</div>
+                <span style={{ color:"#d1d5db", fontSize:14, marginLeft:8 }}>›</span>
+              </div>
+              <div style={{ fontSize:12, color:"#888", marginTop:3 }}>{prop?.name}{i.unit&&` · Lgh ${i.unit}`} · {i.reported}</div>
+              <div style={{ marginTop:4 }}><Badge label={i.status} color={statusColor[i.status]} /></div>
+            </div>;
+          })}
         </div>
       </Card>
     </div>
 
-    {/* Quick issue modal */}
-    {showIssueForm&&issueForm&&<Modal title="🔧 Ny felanmälan" onClose={()=>{ setShowIssueForm(false); setIssueForm(null); }}>
+    {/* Quick issue modal - new or edit */}
+    {(showIssueForm||issueForm?._editing)&&issueForm&&<Modal title={issueForm._editing?"✏️ Redigera felanmälan":"🔧 Ny felanmälan"} onClose={()=>{ setShowIssueForm(false); setIssueForm(null); }}>
       <label style={labelStyle}>Fastighet</label>
       <select value={issueForm.property_id} onChange={e=>setIssueForm({...issueForm,property_id:e.target.value,unit:""})} style={inputStyle}>
         {properties.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
       <label style={labelStyle}>Lägenhet</label>
       {filteredPropTenants.length>0
-        ? <select value={issueForm.unit} onChange={e=>setIssueForm({...issueForm,unit:e.target.value})} style={inputStyle}>
+        ? <select value={issueForm.unit||""} onChange={e=>setIssueForm({...issueForm,unit:e.target.value})} style={inputStyle}>
             <option value="">– Välj lägenhet –</option>
             {filteredPropTenants.map(t=><option key={t.id} value={t.unit}>Lgh {t.unit}{t.name?` – ${t.name}`:""}</option>)}
           </select>
         : <input value={issueForm.unit||""} onChange={e=>setIssueForm({...issueForm,unit:e.target.value})} style={inputStyle} placeholder="t.ex. 2A" />}
       <label style={labelStyle}>Rubrik</label>
-      <input value={issueForm.title} onChange={e=>setIssueForm({...issueForm,title:e.target.value})} style={inputStyle} placeholder="Beskriv felet kort" />
+      <input value={issueForm.title||""} onChange={e=>setIssueForm({...issueForm,title:e.target.value})} style={inputStyle} placeholder="Beskriv felet kort" />
       <label style={labelStyle}>Beskrivning</label>
-      <textarea value={issueForm.description} onChange={e=>setIssueForm({...issueForm,description:e.target.value})} style={{...inputStyle,height:72,resize:"vertical"}} placeholder="Mer detaljer..." />
+      <textarea value={issueForm.description||""} onChange={e=>setIssueForm({...issueForm,description:e.target.value})} style={{...inputStyle,height:72,resize:"vertical"}} placeholder="Mer detaljer..." />
       <div style={{ display:"flex", gap:12 }}>
         <div style={{ flex:1 }}><label style={labelStyle}>Prioritet</label>
-          <select value={issueForm.priority} onChange={e=>setIssueForm({...issueForm,priority:e.target.value})} style={inputStyle}>
+          <select value={issueForm.priority||"medel"} onChange={e=>setIssueForm({...issueForm,priority:e.target.value})} style={inputStyle}>
             {["låg","medel","hög"].map(p=><option key={p} value={p}>{p}</option>)}
           </select>
         </div>
-        <div style={{ flex:1 }}><label style={labelStyle}>Anmälningsdatum</label>
-          <input type="date" value={issueForm.reported} onChange={e=>setIssueForm({...issueForm,reported:e.target.value})} style={inputStyle} />
+        <div style={{ flex:1 }}><label style={labelStyle}>Status</label>
+          <select value={issueForm.status||"ny"} onChange={e=>setIssueForm({...issueForm,status:e.target.value})} style={inputStyle}>
+            {["ny","pågående","åtgärdad"].map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
         </div>
       </div>
-      <label style={labelStyle}>Tilldelad</label>
-      <input value={issueForm.assignee||""} onChange={e=>setIssueForm({...issueForm,assignee:e.target.value})} style={inputStyle} placeholder="t.ex. VVS-jour AB" />
+      <div style={{ display:"flex", gap:12 }}>
+        <div style={{ flex:1 }}><label style={labelStyle}>Anmälningsdatum</label>
+          <input type="date" value={issueForm.reported||""} onChange={e=>setIssueForm({...issueForm,reported:e.target.value})} style={inputStyle} />
+        </div>
+        <div style={{ flex:1 }}><label style={labelStyle}>Tilldelad</label>
+          <input value={issueForm.assignee||""} onChange={e=>setIssueForm({...issueForm,assignee:e.target.value})} style={inputStyle} placeholder="t.ex. VVS-jour AB" />
+        </div>
+      </div>
       <div style={{ display:"flex", gap:10, marginTop:4 }}>
-        <button onClick={saveIssue} disabled={saving||!issueForm.title} style={{ ...btnStyle(G), opacity:!issueForm.title?0.5:1 }}>{saving?"Sparar…":"💾 Spara felanmälan"}</button>
+        <button onClick={saveIssue} disabled={saving||!issueForm.title} style={{ ...btnStyle(G), opacity:!issueForm.title?0.5:1 }}>{saving?"Sparar…":issueForm._editing?"💾 Spara ändringar":"💾 Spara felanmälan"}</button>
         <button onClick={()=>{ setShowIssueForm(false); setIssueForm(null); }} style={btnStyle("#888")}>Avbryt</button>
       </div>
     </Modal>}
