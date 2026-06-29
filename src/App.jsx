@@ -671,6 +671,11 @@ function TenantIssues({ tenant }) {
         <div style={{ flex:1 }}><label style={labelStyle}>Status</label><select value={form.status||"ny"} onChange={e=>setForm({...form,status:e.target.value})} style={inputStyle}>{["ny","pågående","åtgärdad"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
       </div>
       <div style={{ display:"flex",gap:10 }}><button onClick={save} style={btnStyle(G)}>Spara</button><button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
+    </div>}
+  </div>;
+}
+
+// ── APARTMENTS ─────────────────────────────────────────────────────────────────
 function Apartments({ propertyId, properties }) {
   const [tenants, setTenants] = useState([]);
   const [selected, setSelected] = useState(null);
