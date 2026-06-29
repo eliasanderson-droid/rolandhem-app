@@ -174,8 +174,11 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
   }, []);
 
   function downloadIssueFromDash(issue) {
-    const rows=[["Rubrik",issue.title||""],["Beskrivning",issue.description||""],["Prioritet",issue.priority||""],["Status",issue.status||""],["Anmält",issue.reported||""],["Åtgärd",issue.resolution||""]];
-    const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;color:#1a3d2b}h1{font-size:20px;margin-bottom:24px}table{width:100%;border-collapse:collapse}td{padding:10px 12px;border-bottom:1px solid #e0e0e0;font-size:14px}td:first-child{font-weight:700;width:160px;color:#555}</style></head><body><h1>Felanmälan – ${issue.title||""}</h1><table>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v}</td></tr>`).join("")}</table></body></html>`;
+    const prop=properties.find(p=>p.id===issue.property_id);
+    const imgs=(issue.files||[]).filter(f=>/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)).map(f=>`<img src="${f.url}" style="max-width:100%;border-radius:8px;margin-top:12px;display:block;" />`).join("");
+    const docs=(issue.files||[]).filter(f=>!/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)).map(f=>`<a href="${f.url}" style="display:block;margin-top:8px;color:#1a3d2b;">📄 ${f.name||"Dokument"}</a>`).join("");
+    const rows=[["Fastighet",prop?.name||""],["Lägenhet",issue.unit?`Lgh ${issue.unit}`:""],["Rubrik",issue.title||""],["Beskrivning",issue.description||""],["Prioritet",issue.priority||""],["Status",issue.status||""],["Anmält",issue.reported||""],["Åtgärd",issue.resolution||""]];
+    const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;color:#1a3d2b;max-width:800px}h1{font-size:22px;margin-bottom:24px;color:#1a3d2b}table{width:100%;border-collapse:collapse;margin-bottom:24px}td{padding:10px 12px;border-bottom:1px solid #e0e0e0;font-size:14px}td:first-child{font-weight:700;width:160px;color:#555}h2{font-size:16px;margin-bottom:12px;color:#1a3d2b}</style></head><body><h1>Felanmälan – ${issue.title||""}</h1><table>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v||"–"}</td></tr>`).join("")}</table>${imgs||docs?`<h2>Bilder & dokument</h2>${imgs}${docs}`:""}</body></html>`;
     const blob=new Blob([html],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`felanmälan-${(issue.title||"arende").replace(/\s+/g,"-")}.html`;a.click();
@@ -719,18 +722,13 @@ function TenantIssues({ tenant }) {
   const blank = { property_id:tenant.property_id, unit:tenant.unit, title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"", files:[] };
 
   function downloadPDF(issue) {
-    const rows = [
-      ["Rubrik", issue.title||""],
-      ["Beskrivning", issue.description||""],
-      ["Status", issue.status||""],
-      ["Prioritet", issue.priority||""],
-      ["Anmält", issue.reported||""],
-      ["Åtgärd", issue.resolution||""],
-    ];
-    const html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;color:#1a3d2b}h1{font-size:20px;margin-bottom:24px}table{width:100%;border-collapse:collapse}td{padding:10px 12px;border-bottom:1px solid #e0e0e0;font-size:14px}td:first-child{font-weight:700;width:160px;color:#555}</style></head><body><h1>Felanmälan – ${issue.title||""}</h1><table>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v}</td></tr>`).join("")}</table></body></html>`;
-    const blob = new Blob([html], {type:"text/html"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href=url; a.download=`felanmälan-${(issue.title||"arende").replace(/\s+/g,"-")}.html`; a.click();
+    const imgs=(issue.files||[]).filter(f=>/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)).map(f=>`<img src="${f.url}" style="max-width:100%;border-radius:8px;margin-top:12px;display:block;" />`).join("");
+    const docs=(issue.files||[]).filter(f=>!/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)).map(f=>`<a href="${f.url}" style="display:block;margin-top:8px;color:#1a3d2b;">📄 ${f.name||"Dokument"}</a>`).join("");
+    const rows=[["Fastighet",tenant.property_id||""],["Lägenhet",`Lgh ${issue.unit||tenant.unit||""}`],["Hyresgäst",tenant.name||""],["Rubrik",issue.title||""],["Beskrivning",issue.description||""],["Status",issue.status||""],["Prioritet",issue.priority||""],["Anmält",issue.reported||""],["Åtgärd",issue.resolution||""]];
+    const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;color:#1a3d2b;max-width:800px}h1{font-size:22px;margin-bottom:24px}table{width:100%;border-collapse:collapse;margin-bottom:24px}td{padding:10px 12px;border-bottom:1px solid #e0e0e0;font-size:14px}td:first-child{font-weight:700;width:160px;color:#555}h2{font-size:16px;margin-bottom:12px}</style></head><body><h1>Felanmälan – ${issue.title||""}</h1><table>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v||"–"}</td></tr>`).join("")}</table>${imgs||docs?`<h2>Bilder & dokument</h2>${imgs}${docs}`:""}</body></html>`;
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download=`felanmälan-${(issue.title||"arende").replace(/\s+/g,"-")}.html`;a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -921,8 +919,10 @@ function Maintenance({ propertyId, properties }) {
 
   function downloadIssue(issue) {
     const ten=tenants.find(t=>t.unit===issue.unit);
-    const rows=[["Fastighet",""+(issue.property_id||"")],["Lägenhet","Lgh "+(issue.unit||"")+(ten?.name?" – "+ten.name:"")],["Rubrik",issue.title||""],["Beskrivning",issue.description||""],["Prioritet",issue.priority||""],["Status",issue.status||""],["Anmält",issue.reported||""],["Åtgärd",issue.resolution||""]];
-    const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;color:#1a3d2b}h1{font-size:20px;margin-bottom:24px}table{width:100%;border-collapse:collapse}td{padding:10px 12px;border-bottom:1px solid #e0e0e0;font-size:14px}td:first-child{font-weight:700;width:160px;color:#555}</style></head><body><h1>Felanmälan – ${issue.title||""}</h1><table>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v}</td></tr>`).join("")}</table></body></html>`;
+    const imgs=(issue.files||[]).filter(f=>/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)).map(f=>`<img src="${f.url}" style="max-width:100%;border-radius:8px;margin-top:12px;display:block;" />`).join("");
+    const docs=(issue.files||[]).filter(f=>!/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)).map(f=>`<a href="${f.url}" style="display:block;margin-top:8px;color:#1a3d2b;">📄 ${f.name||"Dokument"}</a>`).join("");
+    const rows=[["Fastighet",issue.property_id||""],["Lägenhet","Lgh "+(issue.unit||"")+(ten?.name?" – "+ten.name:"")],["Rubrik",issue.title||""],["Beskrivning",issue.description||""],["Prioritet",issue.priority||""],["Status",issue.status||""],["Anmält",issue.reported||""],["Åtgärd",issue.resolution||""]];
+    const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;color:#1a3d2b;max-width:800px}h1{font-size:22px;margin-bottom:24px}table{width:100%;border-collapse:collapse;margin-bottom:24px}td{padding:10px 12px;border-bottom:1px solid #e0e0e0;font-size:14px}td:first-child{font-weight:700;width:160px;color:#555}h2{font-size:16px;margin-bottom:12px}</style></head><body><h1>Felanmälan – ${issue.title||""}</h1><table>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v||"–"}</td></tr>`).join("")}</table>${imgs||docs?`<h2>Bilder & dokument</h2>${imgs}${docs}`:""}</body></html>`;
     const blob=new Blob([html],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`felanmälan-${(issue.title||"arende").replace(/\s+/g,"-")}.html`;a.click();
