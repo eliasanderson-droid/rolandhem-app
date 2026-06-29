@@ -257,13 +257,13 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
           </select>
         </div>
       </div>
-      <div style={{ display:"flex", gap:12 }}>
-        <div style={{ flex:1 }}><label style={labelStyle}>Anmälningsdatum</label>
-          <input type="date" value={issueForm.reported||""} onChange={e=>setIssueForm({...issueForm,reported:e.target.value})} style={inputStyle} />
-        </div>
-        <div style={{ flex:1 }}><label style={labelStyle}>Tilldelad</label>
-          <input value={issueForm.assignee||""} onChange={e=>setIssueForm({...issueForm,assignee:e.target.value})} style={inputStyle} placeholder="t.ex. VVS-jour AB" />
-        </div>
+      <label style={labelStyle}>Anmälningsdatum</label>
+      <input type="date" value={issueForm.reported||""} onChange={e=>setIssueForm({...issueForm,reported:e.target.value})} style={inputStyle} />
+      <label style={labelStyle}>Bild (valfritt)</label>
+      <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
+        <input type="file" onChange={async e=>{ const file=e.target.files[0]; if(!file) return; try { const path=`${issueForm.property_id}/${Date.now()}_${file.name}`; const url=await uploadFile(file,"issue-images",path); setIssueForm(f=>({...f,image_url:url})); } catch(err){ alert("Uppladdning misslyckades"); } }} style={{ display:"none" }} id="dash-issue-img" accept="image/*" />
+        <label htmlFor="dash-issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📷 Välj bild eller ta foto</label>
+        {issueForm.image_url&&<img src={issueForm.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
       </div>
       <div style={{ display:"flex", gap:10, marginTop:4 }}>
         <button onClick={saveIssue} disabled={saving||!issueForm.title} style={{ ...btnStyle(G), opacity:!issueForm.title?0.5:1 }}>{saving?"Sparar…":issueForm._editing?"💾 Spara ändringar":"💾 Spara felanmälan"}</button>
@@ -654,7 +654,7 @@ function TenantIssues({ tenant }) {
         </div>
         {i.description&&<div style={{ fontSize:13,color:"#666",marginTop:6 }}>{i.description}</div>}
         {i.image_url&&<img src={i.image_url} alt="bild" style={{ width:"100%",maxHeight:200,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
-        <div style={{ fontSize:12,color:"#aaa",marginTop:6 }}>Anmält {i.reported}{i.assignee&&` · ${i.assignee}`}</div>
+        <div style={{ fontSize:12,color:"#aaa",marginTop:6 }}>Anmält {i.reported}</div>
       </div>
     </Card>)}
     {form&&<div style={{ marginTop:16,border:"1.5px solid #e0e0e0",borderRadius:14,padding:20 }}>
@@ -662,7 +662,7 @@ function TenantIssues({ tenant }) {
       <label style={labelStyle}>Beskrivning</label><textarea value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})} style={{...inputStyle,height:60,resize:"vertical"}} />
       <label style={labelStyle}>Ladda upp bild</label>
       <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
-        <input type="file" onChange={handleImage} style={{ display:"none" }} id="issue-img" accept="image/*" capture="environment" />
+        <input type="file" onChange={handleImage} style={{ display:"none" }} id="issue-img" accept="image/*" />
         <label htmlFor="issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📷 Ta foto eller välj bild</label>
         {form.image_url&&<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
       </div>
@@ -670,13 +670,7 @@ function TenantIssues({ tenant }) {
         <div style={{ flex:1 }}><label style={labelStyle}>Prioritet</label><select value={form.priority||"medel"} onChange={e=>setForm({...form,priority:e.target.value})} style={inputStyle}>{["låg","medel","hög"].map(p=><option key={p} value={p}>{p}</option>)}</select></div>
         <div style={{ flex:1 }}><label style={labelStyle}>Status</label><select value={form.status||"ny"} onChange={e=>setForm({...form,status:e.target.value})} style={inputStyle}>{["ny","pågående","åtgärdad"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
       </div>
-      <label style={labelStyle}>Tilldelad</label><input value={form.assignee||""} onChange={e=>setForm({...form,assignee:e.target.value})} style={inputStyle} />
       <div style={{ display:"flex",gap:10 }}><button onClick={save} style={btnStyle(G)}>Spara</button><button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
-    </div>}
-  </div>;
-}
-
-// ── APARTMENTS ─────────────────────────────────────────────────────────────────
 function Apartments({ propertyId, properties }) {
   const [tenants, setTenants] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -836,7 +830,7 @@ function Maintenance({ propertyId, properties }) {
           </div>
           {i.description&&<div style={{ fontSize:13,color:"#666",marginTop:6 }}>{i.description}</div>}
           {i.image_url&&<img src={i.image_url} alt="bild" style={{ width:"100%",maxHeight:200,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
-          <div style={{ fontSize:12,color:"#aaa",marginTop:8 }}>Lgh {i.unit}{ten?.name?` · ${ten.name}`:""} · {i.reported}{i.assignee&&` · ${i.assignee}`}</div>
+          <div style={{ fontSize:12,color:"#aaa",marginTop:8 }}>Lgh {i.unit}{ten?.name?` · ${ten.name}`:""} · {i.reported}</div>
         </div>
       </Card>;
     })}
@@ -848,7 +842,7 @@ function Maintenance({ propertyId, properties }) {
       <label style={labelStyle}>Beskrivning</label><textarea value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})} style={{...inputStyle,height:72,resize:"vertical"}} />
       <label style={labelStyle}>Ladda upp bild</label>
       <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
-        <input type="file" onChange={handleImage} style={{ display:"none" }} id="maint-img" accept="image/*" capture="environment" />
+        <input type="file" onChange={handleImage} style={{ display:"none" }} id="maint-img" accept="image/*" />
         <label htmlFor="maint-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>{uploading?"Laddar upp…":"📷 Ta foto eller välj bild"}</label>
         {form.image_url&&<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
       </div>
@@ -857,7 +851,6 @@ function Maintenance({ propertyId, properties }) {
         <div style={{ flex:1 }}><label style={labelStyle}>Status</label><select value={form.status||"ny"} onChange={e=>setForm({...form,status:e.target.value})} style={inputStyle}>{["ny","pågående","åtgärdad"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
       </div>
       <label style={labelStyle}>Anmälningsdatum</label><input type="date" value={form.reported||""} onChange={e=>setForm({...form,reported:e.target.value})} style={inputStyle} />
-      <label style={labelStyle}>Tilldelad</label><input value={form.assignee||""} onChange={e=>setForm({...form,assignee:e.target.value})} style={inputStyle} />
       <div style={{ display:"flex",gap:10,marginTop:8 }}><button onClick={save} style={btnStyle(G)}>Spara</button><button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
     </Modal>}
   </div>;
