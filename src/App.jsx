@@ -173,7 +173,14 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     sb.from("proformas").select("property_id,data").then(({ data }) => setProformas(data||[]));
   }, []);
 
-  async function openIssueForm() {
+  function downloadIssueFromDash(issue) {
+    const rows=[["Rubrik",issue.title||""],["Beskrivning",issue.description||""],["Prioritet",issue.priority||""],["Status",issue.status||""],["Anmält",issue.reported||""],["Åtgärd",issue.resolution||""]];
+    const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;color:#1a3d2b}h1{font-size:20px;margin-bottom:24px}table{width:100%;border-collapse:collapse}td{padding:10px 12px;border-bottom:1px solid #e0e0e0;font-size:14px}td:first-child{font-weight:700;width:160px;color:#555}</style></head><body><h1>Felanmälan – ${issue.title||""}</h1><table>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v}</td></tr>`).join("")}</table></body></html>`;
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download=`felanmälan-${(issue.title||"arende").replace(/\s+/g,"-")}.html`;a.click();
+    URL.revokeObjectURL(url);
+  }
     const propId = selectedProperty?.id || properties[0]?.id;
     const { data } = await sb.from("tenants").select("id,unit,name,property_id").order("unit");
     setPropTenants(data||[]);
@@ -264,7 +271,10 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
                 <span style={{ color:"#d1d5db", fontSize:14, marginLeft:8 }}>›</span>
               </div>
               <div style={{ fontSize:12, color:"#888", marginTop:3 }}>{prop?.name}{i.unit&&` · Lgh ${i.unit}`} · {i.reported}</div>
-              <div style={{ marginTop:4 }}><Badge label={i.status} color={statusColor[i.status]} /></div>
+              <div style={{ display:"flex",gap:8,marginTop:4,alignItems:"center" }}>
+                <Badge label={i.status} color={statusColor[i.status]} />
+                {(i.files||[]).length>0&&<span style={{ fontSize:12,color:"#6366f1" }}>📎 {i.files.length} fil{i.files.length>1?"er":""}</span>}
+              </div>
             </div>;
           })}
         </div>
@@ -319,6 +329,7 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
       <FileUpload files={issueForm.files||[]} onChange={v=>setIssueForm(f=>({...f,files:v}))} bucket="issue-images" folder={issueForm.property_id||"misc"} />
       <div style={{ display:"flex", gap:10, marginTop:4 }}>
         <button onClick={saveIssue} disabled={saving||!issueForm.title} style={{ ...btnStyle(G), opacity:!issueForm.title?0.5:1 }}>{saving?"Sparar…":issueForm._editing?"💾 Spara ändringar":"💾 Spara felanmälan"}</button>
+        {issueForm._editing&&<button onClick={()=>downloadIssueFromDash(issueForm)} style={{ ...btnStyle("#6366f1"),padding:"9px 14px",fontSize:14 }}>⬇️ Ladda ner</button>}
         <button onClick={()=>{ setShowIssueForm(false); setIssueForm(null); }} style={btnStyle("#888")}>Avbryt</button>
       </div>
     </Modal>}
@@ -906,6 +917,16 @@ function Maintenance({ propertyId, properties }) {
     setUploading(false);
   }
 
+  function downloadIssue(issue) {
+    const ten=tenants.find(t=>t.unit===issue.unit);
+    const rows=[["Fastighet",""+(issue.property_id||"")],["Lägenhet","Lgh "+(issue.unit||"")+(ten?.name?" – "+ten.name:"")],["Rubrik",issue.title||""],["Beskrivning",issue.description||""],["Prioritet",issue.priority||""],["Status",issue.status||""],["Anmält",issue.reported||""],["Åtgärd",issue.resolution||""]];
+    const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;color:#1a3d2b}h1{font-size:20px;margin-bottom:24px}table{width:100%;border-collapse:collapse}td{padding:10px 12px;border-bottom:1px solid #e0e0e0;font-size:14px}td:first-child{font-weight:700;width:160px;color:#555}</style></head><body><h1>Felanmälan – ${issue.title||""}</h1><table>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v}</td></tr>`).join("")}</table></body></html>`;
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download=`felanmälan-${(issue.title||"arende").replace(/\s+/g,"-")}.html`;a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const filtered = issues.filter(i => filter==="alla"||i.status===filter);
   const blank = { property_id:propertyId, unit:"", title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"", files:[] };
 
@@ -920,22 +941,27 @@ function Maintenance({ propertyId, properties }) {
     </div>
     {filtered.map(i=>{
       const ten=tenants.find(t=>t.unit===i.unit);
-      return <Card key={i.id} style={{ display:"flex",alignItems:"flex-start",gap:16,marginBottom:10 }}>
+      return <Card key={i.id} onClick={()=>setForm({...i,files:i.files||[]})} style={{ display:"flex",alignItems:"flex-start",gap:16,marginBottom:10,cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
         <div style={{ width:4,minHeight:60,borderRadius:4,background:priorityColor[i.priority],flexShrink:0 }} />
         <div style={{ flex:1 }}>
           <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
             <div><span style={{ fontWeight:700,fontSize:15,color:G }}>{i.title}</span><span style={{ marginLeft:10 }}><Badge label={i.status} color={statusColor[i.status]} /></span><span style={{ marginLeft:6 }}><Badge label={i.priority} color={priorityColor[i.priority]} /></span></div>
-            <div><button onClick={()=>setForm({...i})} style={iconBtn}>✏️</button><button onClick={()=>remove(i.id)} style={iconBtn}>🗑️</button></div>
+            <div onClick={e=>e.stopPropagation()}>
+              <button onClick={e=>{ e.stopPropagation(); remove(i.id); }} style={iconBtn}>🗑️</button>
+            </div>
           </div>
           {i.description&&<div style={{ fontSize:13,color:"#666",marginTop:6 }}>{i.description}</div>}
           {i.resolution&&i.status==="åtgärdad"&&<div style={{ marginTop:6,padding:"6px 10px",background:"#f0faf4",borderRadius:6,borderLeft:"3px solid #22c55e",fontSize:13,color:"#16a34a" }}>✓ {i.resolution}</div>}
-          {(i.files||[]).length>0&&<div style={{ display:"flex",flexDirection:"column",gap:6,marginTop:8 }}>{(i.files||[]).map((f,idx)=>/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)?<img key={idx} src={f.url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:6 }} />:<a key={idx} href={f.url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13,textDecoration:"none",display:"block" }}>📄 {f.name||"Dokument"}</a>)}</div>}
-          <div style={{ fontSize:12,color:"#aaa",marginTop:8 }}>Lgh {i.unit}{ten?.name?` · ${ten.name}`:""} · {i.reported}</div>
+          {(i.files||[]).length>0&&<div style={{ fontSize:12,color:"#6366f1",marginTop:6 }}>📎 {i.files.length} fil{i.files.length>1?"er":""}</div>}
+          <div style={{ fontSize:12,color:"#aaa",marginTop:6 }}>Lgh {i.unit}{ten?.name?` · ${ten.name}`:""} · {i.reported}</div>
         </div>
       </Card>;
     })}
     {filtered.length===0&&<div style={{ textAlign:"center",padding:40,color:"#aaa" }}>Inga ärenden.</div>}
     {form&&<Modal title={form.id?"Redigera ärende":"Nytt ärende"} onClose={()=>setForm(null)}>
+      {form.id&&<div style={{ display:"flex",justifyContent:"flex-end",marginBottom:12 }}>
+        <button onClick={()=>downloadIssue(form)} style={{ ...btnStyle("#6366f1"),padding:"6px 14px",fontSize:13 }}>⬇️ Ladda ner</button>
+      </div>}
       <label style={labelStyle}>Lägenhet</label>
       {tenants.length>0?<select value={form.unit||""} onChange={e=>setForm({...form,unit:e.target.value})} style={inputStyle}><option value="">– Välj –</option>{tenants.map(t=><option key={t.id} value={t.unit}>Lgh {t.unit}{t.name?` – ${t.name}`:""}</option>)}</select>:<input value={form.unit||""} onChange={e=>setForm({...form,unit:e.target.value})} style={inputStyle} placeholder="t.ex. 2A" />}
       <label style={labelStyle}>Rubrik</label><input value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})} style={inputStyle} />
