@@ -1038,83 +1038,176 @@ function Proforma({ propertyId }) {
 
 // ── SUBTABS ────────────────────────────────────────────────────────────────────
 // ── RENT LOG ───────────────────────────────────────────────────────────────────
-function RentLog({ propertyId }) {
+function RentLog({ propertyId, properties }) {
   const [logs, setLogs] = useState([]);
   const [tenants, setTenants] = useState([]);
   const [form, setForm] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loadingLogs, setLoadingLogs] = useState(true);
   const d = useIsDesktop();
 
-  useEffect(() => { load(); }, [propertyId]);
-  async function load() {
+  // Form state
+  const [selectedPropertyId, setSelectedPropertyId] = useState(propertyId);
+  const [pct, setPct] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().slice(0,10));
+  const [reason, setReason] = useState("");
+  const [applyToTenants, setApplyToTenants] = useState(true);
+  const [previewTenants, setPreviewTenants] = useState([]);
+
+  useEffect(() => { loadLogs(); }, [propertyId]);
+  async function loadLogs() {
+    setLoadingLogs(true);
     const [lRes, tRes] = await Promise.all([
       sb.from("rent_log").select("*").eq("property_id", propertyId).order("effective_date", {ascending:false}),
       sb.from("tenants").select("id,unit,name,rent").eq("property_id", propertyId).order("unit"),
     ]);
-    setLogs(lRes.data||[]); setTenants(tRes.data||[]); setLoading(false);
+    setLogs(lRes.data||[]); setTenants(tRes.data||[]); setLoadingLogs(false);
   }
+
+  // Load tenants for selected property in form
+  async function loadPreview(propId, percent) {
+    if (!propId || !percent) { setPreviewTenants([]); return; }
+    setLoading(true);
+    const { data } = await sb.from("tenants").select("id,unit,name,rent").eq("property_id", propId).order("unit");
+    setPreviewTenants((data||[]).map(t => ({
+      ...t,
+      new_rent: Math.round(t.rent * (1 + Number(percent)/100))
+    })));
+    setLoading(false);
+  }
+
+  useEffect(() => { loadPreview(selectedPropertyId, pct); }, [selectedPropertyId, pct]);
+
   async function save() {
-    if (!form.tenant_id||!form.new_rent||!form.effective_date) return;
-    const tenant = tenants.find(t=>t.id===form.tenant_id);
-    const item = { ...form, property_id:propertyId, old_rent:tenant?.rent||0, new_rent:Number(form.new_rent), increase_pct: tenant?.rent ? ((Number(form.new_rent)-tenant.rent)/tenant.rent*100).toFixed(1) : 0 };
-    await sb.from("rent_log").insert([item]);
-    // Also update tenant's current rent
-    await sb.from("tenants").update({ rent:Number(form.new_rent) }).eq("id", form.tenant_id);
-    setForm(null); load();
+    if (!pct || !effectiveDate || previewTenants.length === 0) return;
+    setSaving(true);
+
+    // Insert log entries for all tenants
+    const logEntries = previewTenants.map(t => ({
+      property_id: selectedPropertyId,
+      tenant_id: t.id,
+      old_rent: t.rent,
+      new_rent: t.new_rent,
+      increase_pct: Number(pct),
+      effective_date: effectiveDate,
+      reason: reason || null,
+    }));
+    await sb.from("rent_log").insert(logEntries);
+
+    // Optionally update current rent on all tenants
+    if (applyToTenants) {
+      for (const t of previewTenants) {
+        await sb.from("tenants").update({ rent: t.new_rent }).eq("id", t.id);
+      }
+    }
+
+    setForm(null); setPct(""); setReason(""); setPreviewTenants([]);
+    setSaving(false); loadLogs();
   }
-  async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("rent_log").delete().eq("id", id); load(); }
 
-  const blank = { tenant_id:"", new_rent:"", effective_date:new Date().toISOString().slice(0,10), reason:"", notes:"" };
+  async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("rent_log").delete().eq("id", id); loadLogs(); }
 
-  if (loading) return <Spinner />;
+  // Group logs by date+reason
+  const grouped = {};
+  logs.forEach(l => {
+    const key = `${l.effective_date}_${l.increase_pct}_${l.reason||""}`;
+    if (!grouped[key]) grouped[key] = { date:l.effective_date, pct:l.increase_pct, reason:l.reason, items:[] };
+    grouped[key].items.push(l);
+  });
+
+  if (loadingLogs) return <Spinner />;
   return <div>
     <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
       <h2 style={{ fontSize:22,fontWeight:700,color:G }}>Hyreshöjningar</h2>
-      <button onClick={()=>setForm(blank)} style={btnStyle(G)}>+ Registrera höjning</button>
+      <button onClick={()=>setForm(true)} style={btnStyle(G)}>+ Registrera höjning</button>
     </div>
+
+    {/* History */}
     {logs.length===0&&!form&&<Card style={{ textAlign:"center",padding:48,color:"#bbb" }}>
       <div style={{ fontSize:40,marginBottom:10 }}>📈</div>
       <div>Inga hyreshöjningar registrerade.</div>
     </Card>}
-    <div style={{ display:"grid",gridTemplateColumns:d?"1fr 1fr":"1fr",gap:10,marginBottom:20 }}>
-      {logs.map(l=>{
-        const t=tenants.find(x=>x.id===l.tenant_id);
-        const pct=Number(l.increase_pct||0);
-        return <Card key={l.id} style={{ padding:16 }}>
-          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
+
+    <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
+      {Object.values(grouped).map((g,idx)=>{
+        const totalOld = g.items.reduce((s,i)=>s+i.old_rent,0);
+        const totalNew = g.items.reduce((s,i)=>s+i.new_rent,0);
+        return <Card key={idx} style={{ padding:18 }}>
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
             <div>
-              <div style={{ fontWeight:700,fontSize:15,color:G }}>Lgh {t?.unit||"–"} · {t?.name||"–"}</div>
-              <div style={{ fontSize:12,color:"#aaa",marginTop:2 }}>Gäller från {l.effective_date}</div>
-              {l.reason&&<div style={{ fontSize:13,color:"#555",marginTop:6 }}>{l.reason}</div>}
+              <div style={{ fontWeight:800,fontSize:16,color:G }}>+{g.pct}% höjning</div>
+              <div style={{ fontSize:12,color:"#aaa",marginTop:2 }}>Gäller från {g.date} · {g.items.length} lägenheter</div>
+              {g.reason&&<div style={{ fontSize:13,color:"#555",marginTop:4 }}>{g.reason}</div>}
             </div>
-            <div style={{ textAlign:"right",flexShrink:0 }}>
-              <div style={{ fontSize:18,fontWeight:800,color:pct>0?"#22c55e":"#ef4444" }}>+{pct}%</div>
-              <div style={{ fontSize:12,color:"#888" }}>{fmt(l.old_rent)} → {fmt(l.new_rent)}</div>
-              <button onClick={()=>remove(l.id)} style={{...iconBtn,fontSize:12,color:"#ccc"}}>🗑️</button>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontSize:13,color:"#888" }}>{fmt(totalOld)} → <span style={{ fontWeight:700,color:G }}>{fmt(totalNew)}</span>/mån</div>
+              <div style={{ fontSize:12,color:"#22c55e",fontWeight:600 }}>+{fmt(totalNew-totalOld)}/mån</div>
             </div>
+          </div>
+          <div style={{ display:"grid",gridTemplateColumns:d?"1fr 1fr 1fr":"1fr 1fr",gap:6 }}>
+            {g.items.map(i=>{
+              const t=tenants.find(x=>x.id===i.tenant_id);
+              return <div key={i.id} style={{ background:"#f8f9fb",borderRadius:8,padding:"8px 12px",fontSize:13 }}>
+                <span style={{ fontWeight:600,color:G }}>Lgh {t?.unit||"–"}</span>
+                <span style={{ color:"#888",marginLeft:6 }}>{t?.name||"–"}</span>
+                <div style={{ color:"#aaa",fontSize:12 }}>{fmt(i.old_rent)} → {fmt(i.new_rent)}</div>
+              </div>;
+            })}
           </div>
         </Card>;
       })}
     </div>
-    {form&&<Modal title="Registrera hyreshöjning" onClose={()=>setForm(null)}>
-      <label style={labelStyle}>Lägenhet</label>
-      <select value={form.tenant_id} onChange={e=>setForm({...form,tenant_id:e.target.value,new_rent:tenants.find(t=>t.id===e.target.value)?.rent||""})} style={inputStyle}>
-        <option value="">– Välj lägenhet –</option>
-        {tenants.map(t=><option key={t.id} value={t.id}>Lgh {t.unit} – {t.name||"Vakant"} (nuv. {fmt(t.rent)})</option>)}
+
+    {/* Form */}
+    {form&&<Modal title="Registrera hyreshöjning" onClose={()=>{ setForm(null); setPct(""); setReason(""); setPreviewTenants([]); }}>
+      <label style={labelStyle}>Fastighet</label>
+      <select value={selectedPropertyId} onChange={e=>setSelectedPropertyId(e.target.value)} style={inputStyle}>
+        {properties.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
+
       <div style={{ display:"flex",gap:12 }}>
-        <div style={{ flex:1 }}><label style={labelStyle}>Ny hyra (kr/mån)</label><input type="number" value={form.new_rent} onChange={e=>setForm({...form,new_rent:e.target.value})} style={inputStyle} /></div>
-        <div style={{ flex:1 }}><label style={labelStyle}>Gäller från</label><input type="date" value={form.effective_date} onChange={e=>setForm({...form,effective_date:e.target.value})} style={inputStyle} /></div>
+        <div style={{ flex:1 }}>
+          <label style={labelStyle}>Höjning (%)</label>
+          <input type="number" value={pct} onChange={e=>setPct(e.target.value)} style={inputStyle} placeholder="t.ex. 4.5" step="0.1" />
+        </div>
+        <div style={{ flex:1 }}>
+          <label style={labelStyle}>Gäller från</label>
+          <input type="date" value={effectiveDate} onChange={e=>setEffectiveDate(e.target.value)} style={inputStyle} />
+        </div>
       </div>
-      {form.tenant_id&&form.new_rent&&<div style={{ background:"#e8f5e9",borderRadius:8,padding:"10px 14px",marginBottom:12,fontSize:14,color:G,fontWeight:600 }}>
-        Höjning: {fmt(tenants.find(t=>t.id===form.tenant_id)?.rent||0)} → {fmt(Number(form.new_rent))} 
-        ({((Number(form.new_rent)-(tenants.find(t=>t.id===form.tenant_id)?.rent||0))/(tenants.find(t=>t.id===form.tenant_id)?.rent||1)*100).toFixed(1)}%)
-      </div>}
+
       <label style={labelStyle}>Anledning</label>
-      <input value={form.reason||""} onChange={e=>setForm({...form,reason:e.target.value})} style={inputStyle} placeholder="t.ex. Årlig indexhöjning 2025" />
-      <label style={labelStyle}>Anteckningar</label>
-      <textarea value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} style={{...inputStyle,height:60,resize:"vertical"}} />
-      <div style={{ display:"flex",gap:10 }}><button onClick={save} style={btnStyle(G)}>Spara</button><button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
+      <input value={reason} onChange={e=>setReason(e.target.value)} style={inputStyle} placeholder="t.ex. Årlig indexhöjning 2025" />
+
+      {/* Preview */}
+      {loading&&<div style={{ textAlign:"center",padding:16,color:"#aaa" }}>Beräknar…</div>}
+      {!loading&&previewTenants.length>0&&<>
+        <div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8 }}>Förhandsgranskning</div>
+        <div style={{ background:"#f8f9fb",borderRadius:10,padding:12,marginBottom:14 }}>
+          {previewTenants.map(t=><div key={t.id} style={{ display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #eee",fontSize:14 }}>
+            <span style={{ color:"#444" }}>Lgh {t.unit} · {t.name||"Vakant"}</span>
+            <span><span style={{ color:"#888" }}>{fmt(t.rent)}</span> → <span style={{ fontWeight:700,color:G }}>{fmt(t.new_rent)}</span></span>
+          </div>)}
+          <div style={{ display:"flex",justifyContent:"space-between",marginTop:10,fontWeight:700,color:G,fontSize:15 }}>
+            <span>Total hyresökning/mån</span>
+            <span>+{fmt(previewTenants.reduce((s,t)=>s+(t.new_rent-t.rent),0))}</span>
+          </div>
+        </div>
+
+        <label style={{ display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",marginBottom:16,padding:"12px 14px",background:applyToTenants?"#e8f5e9":"#f5f5f5",borderRadius:10,border:`1px solid ${applyToTenants?"#a7f3d0":"#e0e0e0"}` }}>
+          <input type="checkbox" checked={applyToTenants} onChange={e=>setApplyToTenants(e.target.checked)} style={{ width:18,height:18,marginTop:2,flexShrink:0 }} />
+          <div>
+            <div style={{ fontWeight:700,fontSize:14,color:G }}>Uppdatera hyran på alla lägenheter</div>
+            <div style={{ fontSize:12,color:"#888",marginTop:2 }}>Bockar du i detta uppdateras hyran direkt på varje lägenhet från {effectiveDate}. Avbockar du sparas bara historiken utan att hyran ändras.</div>
+          </div>
+        </label>
+      </>}
+
+      <div style={{ display:"flex",gap:10 }}>
+        <button onClick={save} disabled={saving||previewTenants.length===0} style={{ ...btnStyle(G),opacity:previewTenants.length===0?0.5:1 }}>{saving?"Sparar…":"Spara höjning"}</button>
+        <button onClick={()=>{ setForm(null); setPct(""); setReason(""); setPreviewTenants([]); }} style={btnStyle("#888")}>Avbryt</button>
+      </div>
     </Modal>}
   </div>;
 }
@@ -1442,7 +1535,7 @@ export default function App() {
         {nav.type==="property"&&nav.tab==="tenants"&&selectedProperty&&<Apartments propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="maintenance"&&selectedProperty&&<Maintenance propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="planned"&&selectedProperty&&<PlannedMaintenance propertyId={selectedProperty.id} />}
-        {nav.type==="property"&&nav.tab==="rentlog"&&selectedProperty&&<RentLog propertyId={selectedProperty.id} />}
+        {nav.type==="property"&&nav.tab==="rentlog"&&selectedProperty&&<RentLog propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="proforma"&&selectedProperty&&<Proforma propertyId={selectedProperty.id} />}
         {nav.type==="property"&&nav.tab==="export"&&selectedProperty&&<ExportPanel propertyId={selectedProperty.id} properties={properties} />}
       </div>
