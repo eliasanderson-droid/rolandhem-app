@@ -569,7 +569,13 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
   async function saveTenant() {
     if (!editForm.unit) return;
     setSaving(true);
-    await sb.from("tenants").update({...editForm, rent:Number(editForm.rent)}).eq("id", editForm.id);
+    const item = {
+      ...editForm,
+      rent: Number(editForm.rent),
+      lease_end: editForm.lease_end || null,
+      move_in: editForm.move_in || null,
+    };
+    await sb.from("tenants").update(item).eq("id", editForm.id);
     setSaving(false); setEditForm(null); onRefresh();
   }
 
@@ -698,6 +704,23 @@ function TenantIssues({ tenant }) {
   }
 
   const blank = { property_id:tenant.property_id, unit:tenant.unit, title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"", files:[] };
+
+  function downloadPDF(issue) {
+    const rows = [
+      ["Rubrik", issue.title||""],
+      ["Beskrivning", issue.description||""],
+      ["Status", issue.status||""],
+      ["Prioritet", issue.priority||""],
+      ["Anmält", issue.reported||""],
+      ["Åtgärd", issue.resolution||""],
+    ];
+    const html = `<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;color:#1a3d2b}h1{font-size:20px;margin-bottom:24px}table{width:100%;border-collapse:collapse}td{padding:10px 12px;border-bottom:1px solid #e0e0e0;font-size:14px}td:first-child{font-weight:700;width:160px;color:#555}</style></head><body><h1>Felanmälan – ${issue.title||""}</h1><table>${rows.map(([l,v])=>`<tr><td>${l}</td><td>${v}</td></tr>`).join("")}</table></body></html>`;
+    const blob = new Blob([html], {type:"text/html"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download=`felanmälan-${(issue.title||"arende").replace(/\s+/g,"-")}.html`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (loading) return <Spinner />;
   return <div>
     <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
@@ -705,7 +728,7 @@ function TenantIssues({ tenant }) {
       <button onClick={()=>setForm(blank)} style={btnStyle(G)}>+ Nytt ärende</button>
     </div>
     {issues.length===0&&!form&&<Card style={{ textAlign:"center",padding:40,color:"#bbb" }}><div style={{ fontSize:36,marginBottom:8 }}>🔧</div><div>Inga ärenden.</div></Card>}
-    {issues.map(i=><Card key={i.id} onClick={()=>setForm({...i})} style={{ display:"flex",alignItems:"flex-start",gap:14,padding:16,marginBottom:10,cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
+    {issues.map(i=><Card key={i.id} onClick={()=>setForm({...i,files:i.files||[]})} style={{ display:"flex",alignItems:"flex-start",gap:14,padding:16,marginBottom:10,cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
       <div style={{ width:4,minHeight:50,borderRadius:4,background:priorityColor[i.priority],flexShrink:0 }} />
       <div style={{ flex:1 }}>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
@@ -716,11 +739,15 @@ function TenantIssues({ tenant }) {
         </div>
         {i.description&&<div style={{ fontSize:13,color:"#666",marginTop:6 }}>{i.description}</div>}
         {i.resolution&&i.status==="åtgärdad"&&<div style={{ marginTop:6,padding:"6px 10px",background:"#f0faf4",borderRadius:6,borderLeft:"3px solid #22c55e",fontSize:13,color:"#16a34a" }}>✓ {i.resolution}</div>}
-        {(i.files||[]).length>0&&<div style={{ display:"flex",flexDirection:"column",gap:6,marginTop:8 }}>{(i.files||[]).map((f,idx)=>/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)?<img key={idx} src={f.url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:6 }} />:<a key={idx} href={f.url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13,textDecoration:"none",display:"block" }}>📄 {f.name||"Dokument"}</a>)}</div>}
-        <div style={{ fontSize:12,color:"#aaa",marginTop:6 }}>Anmält {i.reported}</div>
+        {(i.files||[]).length>0&&<div style={{ fontSize:12,color:"#6366f1",marginTop:6 }}>📎 {i.files.length} fil{i.files.length>1?"er":""}</div>}
+        <div style={{ fontSize:12,color:"#aaa",marginTop:4 }}>Anmält {i.reported}</div>
       </div>
     </Card>)}
     {form&&<div style={{ marginTop:16,border:"1.5px solid #e0e0e0",borderRadius:14,padding:20 }}>
+      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14 }}>
+        <div style={{ fontWeight:700,color:G }}>{form.id?"Redigera ärende":"Nytt ärende"}</div>
+        {form.id&&<button onClick={()=>downloadPDF(form)} style={{ ...btnStyle("#6366f1"),padding:"6px 14px",fontSize:13 }}>⬇️ Ladda ner</button>}
+      </div>
       <label style={labelStyle}>Rubrik</label><input value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})} style={inputStyle} />
       <label style={labelStyle}>Beskrivning</label><textarea value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})} style={{...inputStyle,height:60,resize:"vertical"}} />
       <label style={labelStyle}>Ladda upp bild eller dokument</label>
@@ -733,7 +760,10 @@ function TenantIssues({ tenant }) {
         <label style={labelStyle}>Åtgärd – beskriv vad som gjordes</label>
         <textarea value={form.resolution||""} onChange={e=>setForm({...form,resolution:e.target.value})} style={{...inputStyle,height:72,resize:"vertical",background:"#f0faf4",border:"1px solid #a7f3d0"}} placeholder="Beskriv hur ärendet löstes..." />
       </div>}
-      <div style={{ display:"flex",gap:10 }}><button onClick={save} style={btnStyle(G)}>Spara</button><button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
+      <div style={{ display:"flex",gap:10 }}>
+        <button onClick={save} style={btnStyle(G)}>Spara</button>
+        <button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button>
+      </div>
     </div>}
   </div>;
 }
