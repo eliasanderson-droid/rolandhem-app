@@ -115,22 +115,41 @@ async function uploadFile(file, bucket, path) {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
-function Dashboard({ tenants, contracts, issues, properties, selectedProperty }) {
+function Dashboard({ tenants, contracts, issues, properties, selectedProperty, onIssueAdded }) {
   const d = useIsDesktop();
   const [proformas, setProformas] = useState([]);
+  const [showIssueForm, setShowIssueForm] = useState(false);
+  const [issueForm, setIssueForm] = useState(null);
+  const [propTenants, setPropTenants] = useState([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     sb.from("proformas").select("property_id,data").then(({ data }) => setProformas(data||[]));
   }, []);
 
+  async function openIssueForm() {
+    const propId = selectedProperty?.id || properties[0]?.id;
+    const { data } = await sb.from("tenants").select("id,unit,name,property_id").order("unit");
+    setPropTenants(data||[]);
+    setIssueForm({ property_id: propId, unit:"", title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"" });
+    setShowIssueForm(true);
+  }
+
+  async function saveIssue() {
+    if (!issueForm.title) return;
+    setSaving(true);
+    await sb.from("issues").insert([issueForm]);
+    setSaving(false); setShowIssueForm(false); setIssueForm(null);
+    if (onIssueAdded) onIssueAdded();
+  }
+
+  const filteredPropTenants = issueForm ? propTenants.filter(t=>t.property_id===issueForm.property_id) : [];
+
   const openIssues = issues.filter(i => i.status !== "åtgärdad").length;
   const totalRentMon = tenants.reduce((s,t) => s+(t.rent||0)+(t.parking_cost||0), 0);
   const totalRentYear = totalRentMon * 12;
 
-  // Amortering from proformas for relevant properties
-  const relevantPropIds = selectedProperty
-    ? [selectedProperty.id]
-    : properties.map(p => p.id);
+  const relevantPropIds = selectedProperty ? [selectedProperty.id] : properties.map(p => p.id);
   const totalAmorteringYear = proformas
     .filter(pf => relevantPropIds.includes(pf.property_id))
     .reduce((s, pf) => s + ((pf.data?.belaaning||0) * ((pf.data?.amorteringsprocent ?? 4) / 100)), 0);
@@ -138,8 +157,14 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty })
 
   const expiringSoon = contracts.filter(c => { const x=daysUntil(c.end_date); return x!=null&&x>=0&&x<=90; });
   const recent = [...issues].sort((a,b)=>(b.reported||"").localeCompare(a.reported||"")).slice(0,4);
+
   return <div>
-    <h2 style={{ fontSize:22, fontWeight:700, color:G, marginBottom:20 }}>{selectedProperty?`Översikt – ${selectedProperty.name}`:"Översikt – Alla fastigheter"}</h2>
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+      <h2 style={{ fontSize:22, fontWeight:700, color:G }}>{selectedProperty?`Översikt – ${selectedProperty.name}`:"Översikt – Alla fastigheter"}</h2>
+      <button onClick={openIssueForm} style={{ display:"flex", alignItems:"center", gap:8, background:G, color:"#fff", border:"none", borderRadius:10, padding:"10px 18px", cursor:"pointer", fontWeight:700, fontSize:14, boxShadow:"0 2px 8px rgba(26,61,43,0.3)" }}>
+        <span style={{ fontSize:18, lineHeight:1 }}>+</span> Ny felanmälan
+      </button>
+    </div>
 
     {/* 4 primary KPI cards */}
     <div style={{ display:"grid", gridTemplateColumns:d?"repeat(4,1fr)":"repeat(2,1fr)", gap:14, marginBottom:14 }}>
@@ -162,6 +187,7 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty })
         <div style={{ fontSize:11, color:"#818cf8", marginTop:2 }}>baserat på proforma</div>
       </Card>
     </div>
+
     <div style={{ display:"grid", gridTemplateColumns:d?"1fr 1fr":"1fr", gap:20 }}>
       <Card>
         <h3 style={{ fontSize:15, fontWeight:700, color:G, marginBottom:16 }}>Kontrakt som löper ut</h3>
@@ -183,6 +209,41 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty })
         </div>
       </Card>
     </div>
+
+    {/* Quick issue modal */}
+    {showIssueForm&&issueForm&&<Modal title="🔧 Ny felanmälan" onClose={()=>{ setShowIssueForm(false); setIssueForm(null); }}>
+      <label style={labelStyle}>Fastighet</label>
+      <select value={issueForm.property_id} onChange={e=>setIssueForm({...issueForm,property_id:e.target.value,unit:""})} style={inputStyle}>
+        {properties.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+      </select>
+      <label style={labelStyle}>Lägenhet</label>
+      {filteredPropTenants.length>0
+        ? <select value={issueForm.unit} onChange={e=>setIssueForm({...issueForm,unit:e.target.value})} style={inputStyle}>
+            <option value="">– Välj lägenhet –</option>
+            {filteredPropTenants.map(t=><option key={t.id} value={t.unit}>Lgh {t.unit}{t.name?` – ${t.name}`:""}</option>)}
+          </select>
+        : <input value={issueForm.unit||""} onChange={e=>setIssueForm({...issueForm,unit:e.target.value})} style={inputStyle} placeholder="t.ex. 2A" />}
+      <label style={labelStyle}>Rubrik</label>
+      <input value={issueForm.title} onChange={e=>setIssueForm({...issueForm,title:e.target.value})} style={inputStyle} placeholder="Beskriv felet kort" />
+      <label style={labelStyle}>Beskrivning</label>
+      <textarea value={issueForm.description} onChange={e=>setIssueForm({...issueForm,description:e.target.value})} style={{...inputStyle,height:72,resize:"vertical"}} placeholder="Mer detaljer..." />
+      <div style={{ display:"flex", gap:12 }}>
+        <div style={{ flex:1 }}><label style={labelStyle}>Prioritet</label>
+          <select value={issueForm.priority} onChange={e=>setIssueForm({...issueForm,priority:e.target.value})} style={inputStyle}>
+            {["låg","medel","hög"].map(p=><option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div style={{ flex:1 }}><label style={labelStyle}>Anmälningsdatum</label>
+          <input type="date" value={issueForm.reported} onChange={e=>setIssueForm({...issueForm,reported:e.target.value})} style={inputStyle} />
+        </div>
+      </div>
+      <label style={labelStyle}>Tilldelad</label>
+      <input value={issueForm.assignee||""} onChange={e=>setIssueForm({...issueForm,assignee:e.target.value})} style={inputStyle} placeholder="t.ex. VVS-jour AB" />
+      <div style={{ display:"flex", gap:10, marginTop:4 }}>
+        <button onClick={saveIssue} disabled={saving||!issueForm.title} style={{ ...btnStyle(G), opacity:!issueForm.title?0.5:1 }}>{saving?"Sparar…":"💾 Spara felanmälan"}</button>
+        <button onClick={()=>{ setShowIssueForm(false); setIssueForm(null); }} style={btnStyle("#888")}>Avbryt</button>
+      </div>
+    </Modal>}
   </div>;
 }
 
@@ -1660,10 +1721,10 @@ export default function App() {
         </div>
       </div>
       <div style={{ padding:isDesktop?"28px 32px":"16px",flex:1 }}>
-        {nav.type==="overview"&&<Dashboard tenants={allTenants} contracts={allContracts} issues={allIssues} properties={properties} selectedProperty={null} />}
+        {nav.type==="overview"&&<Dashboard tenants={allTenants} contracts={allContracts} issues={allIssues} properties={properties} selectedProperty={null} onIssueAdded={loadGlobal} />}
         {nav.type==="search"&&<GlobalSearch properties={properties} onNavigate={(tab,propId)=>{ setNav({type:"property",propertyId:propId,tab}); }} />}
         {nav.type==="contacts"&&<Contacts />}
-        {nav.type==="property"&&nav.tab==="overview"&&selectedProperty&&<Dashboard tenants={filteredTenants} contracts={filteredContracts} issues={filteredIssues} properties={properties} selectedProperty={selectedProperty} />}
+        {nav.type==="property"&&nav.tab==="overview"&&selectedProperty&&<Dashboard tenants={filteredTenants} contracts={filteredContracts} issues={filteredIssues} properties={properties} selectedProperty={selectedProperty} onIssueAdded={loadGlobal} />}
         {nav.type==="property"&&nav.tab==="tenants"&&selectedProperty&&<Apartments propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="maintenance"&&selectedProperty&&<Maintenance propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="planned"&&selectedProperty&&<PlannedMaintenance propertyId={selectedProperty.id} />}
