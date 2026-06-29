@@ -649,14 +649,17 @@ function TenantIssues({ tenant }) {
       <button onClick={()=>setForm(blank)} style={btnStyle(G)}>+ Nytt ärende</button>
     </div>
     {issues.length===0&&!form&&<Card style={{ textAlign:"center",padding:40,color:"#bbb" }}><div style={{ fontSize:36,marginBottom:8 }}>🔧</div><div>Inga ärenden.</div></Card>}
-    {issues.map(i=><Card key={i.id} style={{ display:"flex",alignItems:"flex-start",gap:14,padding:16,marginBottom:10 }}>
+    {issues.map(i=><Card key={i.id} onClick={()=>setForm({...i})} style={{ display:"flex",alignItems:"flex-start",gap:14,padding:16,marginBottom:10,cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 3px rgba(0,0,0,0.04)"}>
       <div style={{ width:4,minHeight:50,borderRadius:4,background:priorityColor[i.priority],flexShrink:0 }} />
       <div style={{ flex:1 }}>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
           <div><span style={{ fontWeight:700,fontSize:14,color:G }}>{i.title}</span><span style={{ marginLeft:8 }}><Badge label={i.status} color={statusColor[i.status]} /></span></div>
-          <div><button onClick={()=>setForm({...i})} style={iconBtn}>✏️</button><button onClick={()=>remove(i.id)} style={iconBtn}>🗑️</button></div>
+          <div onClick={e=>e.stopPropagation()}>
+            <button onClick={e=>{ e.stopPropagation(); remove(i.id); }} style={iconBtn}>🗑️</button>
+          </div>
         </div>
         {i.description&&<div style={{ fontSize:13,color:"#666",marginTop:6 }}>{i.description}</div>}
+        {i.resolution&&i.status==="åtgärdad"&&<div style={{ marginTop:6,padding:"6px 10px",background:"#f0faf4",borderRadius:6,borderLeft:"3px solid #22c55e",fontSize:13,color:"#16a34a" }}>✓ {i.resolution}</div>}
         {i.image_url&&<img src={i.image_url} alt="bild" style={{ width:"100%",maxHeight:200,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
         <div style={{ fontSize:12,color:"#aaa",marginTop:6 }}>Anmält {i.reported}</div>
       </div>
@@ -664,11 +667,11 @@ function TenantIssues({ tenant }) {
     {form&&<div style={{ marginTop:16,border:"1.5px solid #e0e0e0",borderRadius:14,padding:20 }}>
       <label style={labelStyle}>Rubrik</label><input value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})} style={inputStyle} />
       <label style={labelStyle}>Beskrivning</label><textarea value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})} style={{...inputStyle,height:60,resize:"vertical"}} />
-      <label style={labelStyle}>Ladda upp bild</label>
+      <label style={labelStyle}>Ladda upp bild eller dokument</label>
       <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
-        <input type="file" onChange={handleImage} style={{ display:"none" }} id="issue-img" accept="image/*" />
+        <input type="file" onChange={handleImage} style={{ display:"none" }} id="issue-img" accept="image/*,.pdf,.doc,.docx,.xlsx" />
         <label htmlFor="issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📎 Välj bild eller dokument</label>
-        {form.image_url&&<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
+        {form.image_url&&<div style={{ marginTop:8 }}>{form.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i)?<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8 }} />:<a href={form.image_url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13 }}>📄 Dokument uppladdad – klicka för att öppna</a>}</div>}
       </div>
       <div style={{ display:"flex",gap:12 }}>
         <div style={{ flex:1 }}><label style={labelStyle}>Prioritet</label><select value={form.priority||"medel"} onChange={e=>setForm({...form,priority:e.target.value})} style={inputStyle}>{["låg","medel","hög"].map(p=><option key={p} value={p}>{p}</option>)}</select></div>
@@ -854,11 +857,11 @@ function Maintenance({ propertyId, properties }) {
       {tenants.length>0?<select value={form.unit||""} onChange={e=>setForm({...form,unit:e.target.value})} style={inputStyle}><option value="">– Välj –</option>{tenants.map(t=><option key={t.id} value={t.unit}>Lgh {t.unit}{t.name?` – ${t.name}`:""}</option>)}</select>:<input value={form.unit||""} onChange={e=>setForm({...form,unit:e.target.value})} style={inputStyle} placeholder="t.ex. 2A" />}
       <label style={labelStyle}>Rubrik</label><input value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})} style={inputStyle} />
       <label style={labelStyle}>Beskrivning</label><textarea value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})} style={{...inputStyle,height:72,resize:"vertical"}} />
-      <label style={labelStyle}>Ladda upp bild</label>
+      <label style={labelStyle}>Ladda upp bild eller dokument</label>
       <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
-        <input type="file" onChange={handleImage} style={{ display:"none" }} id="maint-img" accept="image/*" />
+        <input type="file" onChange={handleImage} style={{ display:"none" }} id="maint-img" accept="image/*,.pdf,.doc,.docx,.xlsx" />
         <label htmlFor="maint-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>{uploading?"Laddar upp…":"📎 Välj bild eller dokument"}</label>
-        {form.image_url&&<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
+        {form.image_url&&<div style={{ marginTop:8 }}>{form.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i)?<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8 }} />:<a href={form.image_url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13 }}>📄 Fil uppladdad – klicka för att öppna</a>}</div>}
       </div>
       <div style={{ display:"flex",gap:12 }}>
         <div style={{ flex:1 }}><label style={labelStyle}>Prioritet</label><select value={form.priority||"medel"} onChange={e=>setForm({...form,priority:e.target.value})} style={inputStyle}>{["låg","medel","hög"].map(p=><option key={p} value={p}>{p}</option>)}</select></div>
