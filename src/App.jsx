@@ -177,9 +177,9 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     {/* 4 primary KPI cards */}
     <div style={{ display:"grid", gridTemplateColumns:d?"repeat(4,1fr)":"repeat(2,1fr)", gap:14, marginBottom:14 }}>
       <StatCard label="Hyresgäster" value={tenants.length} sub={`${properties.length} fastigheter`} />
+      <StatCard label="Öppna ärenden" value={openIssues} color={openIssues>0?"#f59e0b":"#22c55e"} sub={openIssues===0?"Inga öppna ärenden":undefined} />
       <StatCard label="Hyresintäkt/mån" value={fmt(totalRentMon)} color={G} />
       <StatCard label="Hyresintäkt/år" value={fmt(totalRentYear)} color={G} />
-      <StatCard label="Öppna ärenden" value={openIssues} color={openIssues>0?"#f59e0b":"#22c55e"} sub={openIssues===0?"Inga öppna ärenden":undefined} />
     </div>
 
     {/* Secondary row - amortering */}
@@ -198,16 +198,6 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
 
     <div style={{ display:"grid", gridTemplateColumns:d?"1fr 1fr":"1fr", gap:20 }}>
       <Card>
-        <h3 style={{ fontSize:15, fontWeight:700, color:G, marginBottom:16 }}>Kontrakt som löper ut</h3>
-        {expiringSoon.length===0?<div style={{ color:"#aaa" }}>Inga inom 90 dagar.</div>:expiringSoon.map(c=>{
-          const t=tenants.find(x=>x.id===c.tenant_id), p=properties.find(x=>x.id===t?.property_id), days=daysUntil(c.end_date);
-          return <div key={c.id} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f5f5f5" }}>
-            <div><div style={{ fontWeight:600 }}>{t?.name}</div><div style={{ fontSize:12, color:"#888" }}>{p?.name} · Lgh {t?.unit}</div></div>
-            <Badge label={`${days} dagar`} color={days<30?"#ef4444":"#f59e0b"} />
-          </div>;
-        })}
-      </Card>
-      <Card>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
           <h3 style={{ fontSize:15, fontWeight:700, color:G }}>Senaste felanmälningar</h3>
           <button onClick={openIssueForm} title="Ny felanmälan" style={{ width:32, height:32, borderRadius:"50%", background:G, color:"#fff", border:"none", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 2px 6px rgba(26,61,43,0.3)", lineHeight:1 }}>+</button>
@@ -225,6 +215,16 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
             </div>;
           })}
         </div>
+      </Card>
+      <Card>
+        <h3 style={{ fontSize:15, fontWeight:700, color:G, marginBottom:16 }}>Kontrakt som löper ut</h3>
+        {expiringSoon.length===0?<div style={{ color:"#aaa" }}>Inga inom 90 dagar.</div>:expiringSoon.map(c=>{
+          const t=tenants.find(x=>x.id===c.tenant_id), p=properties.find(x=>x.id===t?.property_id), days=daysUntil(c.end_date);
+          return <div key={c.id} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f5f5f5" }}>
+            <div><div style={{ fontWeight:600 }}>{t?.name}</div><div style={{ fontSize:12, color:"#888" }}>{p?.name} · Lgh {t?.unit}</div></div>
+            <Badge label={`${days} dagar`} color={days<30?"#ef4444":"#f59e0b"} />
+          </div>;
+        })}
       </Card>
     </div>
 
@@ -257,12 +257,16 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
           </select>
         </div>
       </div>
+      {issueForm.status==="åtgärdad"&&<div style={{ marginBottom:12 }}>
+        <label style={labelStyle}>Åtgärd – beskriv vad som gjordes</label>
+        <textarea value={issueForm.resolution||""} onChange={e=>setIssueForm({...issueForm,resolution:e.target.value})} style={{...inputStyle,height:72,resize:"vertical",background:"#f0faf4",border:"1px solid #a7f3d0"}} placeholder="Beskriv hur ärendet löstes..." />
+      </div>}
       <label style={labelStyle}>Anmälningsdatum</label>
-      <input type="date" value={issueForm.reported||""} onChange={e=>setIssueForm({...issueForm,reported:e.target.value})} style={inputStyle} />
+      <input type="date" value={issueForm.reported||""} onChange={e=>setIssueForm({...issueForm,reported:e.target.value})} style={{...inputStyle,maxWidth:"50%"}} />
       <label style={labelStyle}>Bild (valfritt)</label>
       <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
-        <input type="file" onChange={async e=>{ const file=e.target.files[0]; if(!file) return; try { const path=`${issueForm.property_id}/${Date.now()}_${file.name}`; const url=await uploadFile(file,"issue-images",path); setIssueForm(f=>({...f,image_url:url})); } catch(err){ alert("Uppladdning misslyckades"); } }} style={{ display:"none" }} id="dash-issue-img" accept="image/*" />
-        <label htmlFor="dash-issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📷 Välj bild eller ta foto</label>
+        <input type="file" onChange={async e=>{ const file=e.target.files[0]; if(!file) return; try { const path=`${issueForm.property_id}/${Date.now()}_${file.name}`; const url=await uploadFile(file,"issue-images",path); setIssueForm(f=>({...f,image_url:url})); } catch(err){ alert("Uppladdning misslyckades"); } }} style={{ display:"none" }} id="dash-issue-img" accept="image/*,.pdf,.doc,.docx" />
+        <label htmlFor="dash-issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📎 Välj bild eller dokument</label>
         {issueForm.image_url&&<img src={issueForm.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
       </div>
       <div style={{ display:"flex", gap:10, marginTop:4 }}>
@@ -663,13 +667,17 @@ function TenantIssues({ tenant }) {
       <label style={labelStyle}>Ladda upp bild</label>
       <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
         <input type="file" onChange={handleImage} style={{ display:"none" }} id="issue-img" accept="image/*" />
-        <label htmlFor="issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📷 Ta foto eller välj bild</label>
+        <label htmlFor="issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📎 Välj bild eller dokument</label>
         {form.image_url&&<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
       </div>
       <div style={{ display:"flex",gap:12 }}>
         <div style={{ flex:1 }}><label style={labelStyle}>Prioritet</label><select value={form.priority||"medel"} onChange={e=>setForm({...form,priority:e.target.value})} style={inputStyle}>{["låg","medel","hög"].map(p=><option key={p} value={p}>{p}</option>)}</select></div>
         <div style={{ flex:1 }}><label style={labelStyle}>Status</label><select value={form.status||"ny"} onChange={e=>setForm({...form,status:e.target.value})} style={inputStyle}>{["ny","pågående","åtgärdad"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
       </div>
+      {form.status==="åtgärdad"&&<div style={{ marginBottom:12 }}>
+        <label style={labelStyle}>Åtgärd – beskriv vad som gjordes</label>
+        <textarea value={form.resolution||""} onChange={e=>setForm({...form,resolution:e.target.value})} style={{...inputStyle,height:72,resize:"vertical",background:"#f0faf4",border:"1px solid #a7f3d0"}} placeholder="Beskriv hur ärendet löstes..." />
+      </div>}
       <div style={{ display:"flex",gap:10 }}><button onClick={save} style={btnStyle(G)}>Spara</button><button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
     </div>}
   </div>;
@@ -834,6 +842,7 @@ function Maintenance({ propertyId, properties }) {
             <div><button onClick={()=>setForm({...i})} style={iconBtn}>✏️</button><button onClick={()=>remove(i.id)} style={iconBtn}>🗑️</button></div>
           </div>
           {i.description&&<div style={{ fontSize:13,color:"#666",marginTop:6 }}>{i.description}</div>}
+          {i.resolution&&i.status==="åtgärdad"&&<div style={{ marginTop:6,padding:"6px 10px",background:"#f0faf4",borderRadius:6,borderLeft:"3px solid #22c55e",fontSize:13,color:"#16a34a" }}>✓ {i.resolution}</div>}
           {i.image_url&&<img src={i.image_url} alt="bild" style={{ width:"100%",maxHeight:200,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
           <div style={{ fontSize:12,color:"#aaa",marginTop:8 }}>Lgh {i.unit}{ten?.name?` · ${ten.name}`:""} · {i.reported}</div>
         </div>
@@ -848,13 +857,17 @@ function Maintenance({ propertyId, properties }) {
       <label style={labelStyle}>Ladda upp bild</label>
       <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
         <input type="file" onChange={handleImage} style={{ display:"none" }} id="maint-img" accept="image/*" />
-        <label htmlFor="maint-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>{uploading?"Laddar upp…":"📷 Ta foto eller välj bild"}</label>
+        <label htmlFor="maint-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>{uploading?"Laddar upp…":"📎 Välj bild eller dokument"}</label>
         {form.image_url&&<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
       </div>
       <div style={{ display:"flex",gap:12 }}>
         <div style={{ flex:1 }}><label style={labelStyle}>Prioritet</label><select value={form.priority||"medel"} onChange={e=>setForm({...form,priority:e.target.value})} style={inputStyle}>{["låg","medel","hög"].map(p=><option key={p} value={p}>{p}</option>)}</select></div>
         <div style={{ flex:1 }}><label style={labelStyle}>Status</label><select value={form.status||"ny"} onChange={e=>setForm({...form,status:e.target.value})} style={inputStyle}>{["ny","pågående","åtgärdad"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
       </div>
+      {form.status==="åtgärdad"&&<div style={{ marginBottom:12 }}>
+        <label style={labelStyle}>Åtgärd – beskriv vad som gjordes</label>
+        <textarea value={form.resolution||""} onChange={e=>setForm({...form,resolution:e.target.value})} style={{...inputStyle,height:72,resize:"vertical",background:"#f0faf4",border:"1px solid #a7f3d0"}} placeholder="Beskriv hur ärendet löstes..." />
+      </div>}
       <label style={labelStyle}>Anmälningsdatum</label><input type="date" value={form.reported||""} onChange={e=>setForm({...form,reported:e.target.value})} style={inputStyle} />
       <div style={{ display:"flex",gap:10,marginTop:8 }}><button onClick={save} style={btnStyle(G)}>Spara</button><button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
     </Modal>}
@@ -1637,6 +1650,17 @@ export default function App() {
     setAllIssues(iRes.data||[]);
     setAllContracts(cRes.data||[]);
   }
+
+  // Realtime: reload issues whenever any issue changes anywhere in the app
+  useEffect(() => {
+    if (!session) return;
+    const channel = sb.channel("issues-changes")
+      .on("postgres_changes", { event:"*", schema:"public", table:"issues" }, () => {
+        sb.from("issues").select("*").then(({ data }) => setAllIssues(data||[]));
+      })
+      .subscribe();
+    return () => sb.removeChannel(channel);
+  }, [session]);
 
   const selectedProperty = nav.type==="property" ? properties.find(p=>p.id===nav.propertyId)||null : null;
   const filteredTenants = selectedProperty ? allTenants.filter(t=>t.property_id===selectedProperty.id) : allTenants;
