@@ -118,12 +118,13 @@ async function uploadFile(file, bucket, path) {
 // ── MULTI FILE UPLOAD ─────────────────────────────────────────────────────────
 function FileUpload({ files=[], onChange, bucket="issue-images", folder="misc" }) {
   const [uploading, setUploading] = useState(false);
+  const inputId = `fu-${folder.replace(/[^a-z0-9]/gi,"-")}`;
 
   async function handleFiles(e) {
     const selected = Array.from(e.target.files);
     if (!selected.length) return;
     setUploading(true);
-    const uploaded = [...files];
+    const uploaded = [...files]; // keep existing files!
     for (const file of selected) {
       try {
         const path = `${folder}/${Date.now()}_${file.name}`;
@@ -133,6 +134,7 @@ function FileUpload({ files=[], onChange, bucket="issue-images", folder="misc" }
     }
     onChange(uploaded);
     setUploading(false);
+    e.target.value = ""; // reset so same file can be re-selected
   }
 
   function remove(idx) { onChange(files.filter((_,i)=>i!==idx)); }
@@ -141,8 +143,8 @@ function FileUpload({ files=[], onChange, bucket="issue-images", folder="misc" }
 
   return <div>
     <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:10,background:"#f0faf4" }}>
-      <input type="file" multiple onChange={handleFiles} style={{ display:"none" }} id={`fu-${folder}`} accept="image/*,.pdf,.doc,.docx,.xlsx" />
-      <label htmlFor={`fu-${folder}`} style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>
+      <input type="file" multiple onChange={handleFiles} style={{ display:"none" }} id={inputId} accept="image/*,.pdf,.doc,.docx,.xlsx" />
+      <label htmlFor={inputId} style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>
         {uploading?"Laddar upp…":"📎 Välj filer (flera tillåtna)"}
       </label>
     </div>
@@ -158,7 +160,6 @@ function FileUpload({ files=[], onChange, bucket="issue-images", folder="misc" }
     </div>}
   </div>;
 }
-
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function Dashboard({ tenants, contracts, issues, properties, selectedProperty, onIssueAdded }) {
   const d = useIsDesktop();
@@ -212,7 +213,14 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     .reduce((s, pf) => s + ((pf.data?.belaaning||0) * ((pf.data?.amorteringsprocent ?? 4) / 100)), 0);
   const totalAmorteringMon = totalAmorteringYear / 12;
 
-  const expiringSoon = contracts.filter(c => { const x=daysUntil(c.end_date); return x!=null&&x>=0&&x<=90; });
+  const expiringSoon = [
+    ...contracts
+      .filter(c => { const x=daysUntil(c.end_date); return x!=null&&x>=0&&x<=90; })
+      .map(c => { const t=tenants.find(x=>x.id===c.tenant_id), p=properties.find(x=>x.id===t?.property_id), days=daysUntil(c.end_date); return { key:c.id, name:t?.name, prop:p?.name, unit:t?.unit, days }; }),
+    ...tenants
+      .filter(t => { const x=daysUntil(t.lease_end); return x!=null&&x>=0&&x<=90&&!contracts.some(c=>c.tenant_id===t.id&&c.end_date===t.lease_end); })
+      .map(t => { const p=properties.find(x=>x.id===t.property_id), days=daysUntil(t.lease_end); return { key:"t-"+t.id, name:t.name, prop:p?.name, unit:t.unit, days }; })
+  ].sort((a,b)=>a.days-b.days);
   const recent = [...issues].sort((a,b)=>(b.reported||"").localeCompare(a.reported||"")).slice(0,4);
 
   return <div>
@@ -223,8 +231,7 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     {/* 4 primary KPI cards */}
     <div style={{ display:"grid", gridTemplateColumns:d?"repeat(4,1fr)":"repeat(2,1fr)", gap:14, marginBottom:14 }}>
       <StatCard label="Hyresgäster" value={tenants.length} sub={`${properties.length} fastigheter`} />
-      <StatCard label="Öppna ärenden" value={openIssues} color={openIssues>0?"#f59e0b":"#22c55e"} sub={openIssues===0?"Inga öppna ärenden":undefined} />
-      <StatCard label="Hyresintäkt/mån" value={fmt(totalRentMon)} color={G} />
+      <StatCard label="Öppna ärenden" value={openIssues} color={openIssues>0?"#f59e0b":"#22c55e"} sub={openIssues===0?"Inga öppna ärenden":undefined} />      <StatCard label="Hyresintäkt/mån" value={fmt(totalRentMon)} color={G} />
       <StatCard label="Hyresintäkt/år" value={fmt(totalRentYear)} color={G} />
     </div>
 
@@ -265,10 +272,9 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
       <Card>
         <h3 style={{ fontSize:15, fontWeight:700, color:G, marginBottom:16 }}>Kontrakt som löper ut</h3>
         {expiringSoon.length===0?<div style={{ color:"#aaa" }}>Inga inom 90 dagar.</div>:expiringSoon.map(c=>{
-          const t=tenants.find(x=>x.id===c.tenant_id), p=properties.find(x=>x.id===t?.property_id), days=daysUntil(c.end_date);
-          return <div key={c.id} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f5f5f5" }}>
-            <div><div style={{ fontWeight:600 }}>{t?.name}</div><div style={{ fontSize:12, color:"#888" }}>{p?.name} · Lgh {t?.unit}</div></div>
-            <Badge label={`${days} dagar`} color={days<30?"#ef4444":"#f59e0b"} />
+          return <div key={c.key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f5f5f5" }}>
+            <div><div style={{ fontWeight:600 }}>{c.name}</div><div style={{ fontSize:12, color:"#888" }}>{c.prop} · Lgh {c.unit}</div></div>
+            <Badge label={`${c.days} dagar`} color={c.days<30?"#ef4444":"#f59e0b"} />
           </div>;
         })}
       </Card>
@@ -481,7 +487,7 @@ function Inspections({ tenant }) {
   }
   async function save() {
     if (!form.date) return;
-    const item = {...form, tenant_id:tenant.id, items:form.items||[]};
+    const item = {...form, tenant_id:tenant.id, items:form.items||[], files:form.files||[]};
     if (form.id) await sb.from("inspections").update(item).eq("id", form.id);
     else await sb.from("inspections").insert([item]);
     setForm(null); load();
@@ -489,7 +495,7 @@ function Inspections({ tenant }) {
   async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("inspections").delete().eq("id", id); load(); }
   function addRoom(r) { if (!form.items?.find(x=>x.room===r)) setForm({...form,items:[...(form.items||[]),{room:r,note:""}]}); }
 
-  const blank = { tenant_id:tenant.id, type:"inflyttning", date:new Date().toISOString().slice(0,10), tenant_name:tenant.name||"", condition:"bra", notes:"", items:[] };
+  const blank = { tenant_id:tenant.id, type:"inflyttning", date:new Date().toISOString().slice(0,10), tenant_name:tenant.name||"", condition:"bra", notes:"", items:[], files:[] };
 
   if (loading) return <Spinner />;
   return <div>
@@ -507,7 +513,7 @@ function Inspections({ tenant }) {
             <span style={{ fontWeight:700,color:G,textTransform:"capitalize" }}>{ins.type}sbesiktning</span>
             <Badge label={ins.condition} color={conditionColors[ins.condition]||"#888"} />
           </div>
-          <div><button onClick={()=>setForm({...ins,items:ins.items||[]})} style={iconBtn}>✏️</button><button onClick={()=>remove(ins.id)} style={iconBtn}>🗑️</button></div>
+          <div><button onClick={()=>setForm({...ins,items:ins.items||[],files:ins.files||[]})} style={iconBtn}>✏️</button><button onClick={()=>remove(ins.id)} style={iconBtn}>🗑️</button></div>
         </div>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10 }}>
           {[["Datum",ins.date],["Hyresgäst",ins.tenant_name||"–"],["Skick",ins.condition]].map(([l,v])=><div key={l}><div style={{ fontSize:11,color:"#aaa",fontWeight:600,textTransform:"uppercase" }}>{l}</div><div style={{ fontSize:13,fontWeight:600,color:G,marginTop:2 }}>{v}</div></div>)}
@@ -518,6 +524,11 @@ function Inspections({ tenant }) {
           </div>
         </div>}
         {ins.notes&&<div style={{ marginTop:10,padding:"8px 12px",background:"#fffbeb",borderRadius:8,borderLeft:"3px solid #fcd34d",fontSize:13,color:"#555" }}>📝 {ins.notes}</div>}
+        {(ins.files||[]).length>0&&<div style={{ display:"flex",flexDirection:"column",gap:6,marginTop:10 }}>
+          {(ins.files||[]).map((f,i)=>/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)
+            ?<img key={i} src={f.url} alt="" style={{ width:"100%",maxHeight:200,objectFit:"cover",borderRadius:8 }} />
+            :<a key={i} href={f.url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13,textDecoration:"none" }}>📄 {f.name||"Dokument"}</a>)}
+        </div>}
       </div>;
     })}
     {form&&<div style={{ marginTop:16,border:"1.5px solid #e0e0e0",borderRadius:14,padding:20 }}>
@@ -541,6 +552,8 @@ function Inspections({ tenant }) {
       </div>)}
       <label style={{...labelStyle,marginTop:8}}>Anteckningar</label>
       <textarea value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})} style={{...inputStyle,height:64,resize:"vertical"}} />
+      <label style={{...labelStyle,marginTop:8}}>Ladda upp bild eller dokument</label>
+      <FileUpload files={form.files||[]} onChange={v=>setForm({...form,files:v})} bucket="documents" folder={`inspections/${tenant.id}`} />
       <div style={{ display:"flex",gap:10 }}><button onClick={save} style={btnStyle(G)}>Spara</button><button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
     </div>}
   </div>;
