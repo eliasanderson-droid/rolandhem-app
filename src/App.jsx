@@ -15,7 +15,7 @@ const inputStyle = { width:"100%", padding:"9px 12px", borderRadius:8, border:"1
 const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#666", marginBottom:4, textTransform:"uppercase", letterSpacing:"0.05em" };
 const fmt = n => Math.round(Number(n||0)).toLocaleString("sv-SE") + " kr";
 const fmtKkr = v => Math.round(v/1000).toLocaleString("sv-SE") + " kkr";
-const fmtPct = v => Number(v).toFixed(1) + "%";
+const fmtPct = v => { const n = Number(v); return (Number.isInteger(n) ? n.toFixed(0) : n.toFixed(2).replace(/\.?0+$/, "")) + "%"; };
 
 const statusColor = { ny:"#6366f1", pågående:"#f59e0b", åtgärdad:"#22c55e", aktiv:"#22c55e", inaktiv:"#94a3b8" };
 const priorityColor = { hög:"#ef4444", medel:"#f59e0b", låg:"#22c55e" };
@@ -950,7 +950,13 @@ function Proforma({ propertyId }) {
     <div><div style={{ fontSize:14,color:highlight?G:"#444",fontWeight:highlight?700:400 }}>{label}</div>{sub&&<div style={{ fontSize:11,color:"#aaa" }}>{sub}</div>}</div>
     <div style={{ fontSize:15,fontWeight:highlight?800:600,color:highlight?G:"#222" }}>{value}</div>
   </div>;
-  const numIn = (val,onChange) => <input type="number" value={val||""} onChange={e=>onChange(e.target.value)} style={{ width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #c8e6c9",fontSize:14,fontWeight:600,color:G,textAlign:"right",boxSizing:"border-box" }} />;
+  const numIn = (val, onChange) => <input
+    type="number"
+    defaultValue={val||""}
+    key={val}
+    onBlur={e=>onChange(e.target.value)}
+    style={{ width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #c8e6c9",fontSize:14,fontWeight:600,color:G,textAlign:"right",boxSizing:"border-box" }}
+  />;
 
   if (!proforma&&!editing) return <div style={{ textAlign:"center",padding:48,color:"#bbb" }}>
     <div style={{ fontSize:40,marginBottom:10 }}>📈</div>
@@ -1090,7 +1096,7 @@ function RentLog({ propertyId, properties }) {
       tenant_id: t.id,
       old_rent: t.rent,
       new_rent: t.new_rent,
-      increase_pct: t.rent ? Number(((t.new_rent - t.rent) / t.rent * 100).toFixed(1)) : Number(pct),
+      increase_pct: t.rent ? Number(((t.new_rent - t.rent) / t.rent * 100).toFixed(4)) : Number(pct),
       effective_date: effectiveDate,
       reason: reason || null,
     }));
@@ -1159,14 +1165,33 @@ function RentLog({ propertyId, properties }) {
                     <div style={{ fontSize:12,color:"#aaa" }}>Gammal hyra: {fmt(item.old_rent)}</div>
                   </div>
                   <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
-                    <span style={{ fontSize:12,color:"#aaa" }}>Ny hyra:</span>
-                    <input
-                      type="number"
-                      value={item.new_rent}
-                      onChange={e=>setEditItems(prev=>prev.map((x,j)=>j===i?{...x,new_rent:Number(e.target.value)||x.new_rent,increase_pct:Number(((Number(e.target.value)-x.old_rent)/x.old_rent*100).toFixed(1))}:x))}
-                      style={{ width:90,padding:"5px 8px",borderRadius:6,border:"1px solid #c8e6c9",fontSize:14,fontWeight:700,color:G,textAlign:"right" }}
-                    />
-                    <span style={{ fontSize:12,color:"#aaa" }}>kr</span>
+                    <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4 }}>
+                      <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                        <span style={{ fontSize:12,color:"#aaa" }}>Ny hyra:</span>
+                        <input
+                          type="number"
+                          value={item.new_rent}
+                          onChange={e=>setEditItems(prev=>prev.map((x,j)=>j===i?{...x,new_rent:Number(e.target.value)||x.new_rent,increase_pct:Number(((Number(e.target.value)-x.old_rent)/x.old_rent*100).toFixed(4))}:x))}
+                          style={{ width:90,padding:"5px 8px",borderRadius:6,border:"1px solid #c8e6c9",fontSize:14,fontWeight:700,color:G,textAlign:"right" }}
+                        />
+                        <span style={{ fontSize:12,color:"#aaa" }}>kr</span>
+                      </div>
+                      <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                        <span style={{ fontSize:12,color:"#aaa" }}>Procent:</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={item.increase_pct}
+                          onChange={e=>{
+                            const newPct = e.target.value.replace(",",".");
+                            const newRent = Math.round(item.old_rent * (1 + Number(newPct)/100));
+                            setEditItems(prev=>prev.map((x,j)=>j===i?{...x,increase_pct:newPct,new_rent:newRent}:x));
+                          }}
+                          style={{ width:70,padding:"5px 8px",borderRadius:6,border:"1px solid #c8e6c9",fontSize:13,color:G,textAlign:"right" }}
+                        />
+                        <span style={{ fontSize:12,color:"#aaa" }}>%</span>
+                      </div>
+                    </div>
                   </div>
                 </div>;
               })}
