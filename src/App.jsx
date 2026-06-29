@@ -11,7 +11,7 @@ const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAMgCAYAAADbcAZo
 const G = "#1a3d2b";
 const btnStyle = bg => ({ background:bg, color:"#fff", border:"none", borderRadius:8, padding:"9px 18px", cursor:"pointer", fontWeight:600, fontSize:14 });
 const iconBtn = { background:"none", border:"none", cursor:"pointer", fontSize:16, padding:"2px 4px" };
-const inputStyle = { width:"100%", padding:"9px 12px", borderRadius:8, border:"1px solid #e0e0e0", fontSize:14, marginBottom:12, boxSizing:"border-box", display:"block" };
+const inputStyle = { width:"100%", padding:"9px 12px", borderRadius:8, border:"1px solid #e0e0e0", fontSize:16, marginBottom:12, boxSizing:"border-box", display:"block" };
 const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"#666", marginBottom:4, textTransform:"uppercase", letterSpacing:"0.05em" };
 const fmt = n => Math.round(Number(n||0)).toLocaleString("sv-SE") + " kr";
 const fmtKkr = v => Math.round(v/1000).toLocaleString("sv-SE") + " kkr";
