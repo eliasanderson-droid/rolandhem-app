@@ -940,7 +940,7 @@ function Proforma({ propertyId }) {
   const totalTax = (d2.taxVardeByggnad||0) + (d2.taxVardeMark||0);
   const bokfortByggnad = totalTax ? (d2.taxVardeByggnad||0) * ((d2.kopeskilling||0) / totalTax) : 0;
   const avskrivning = bokfortByggnad * ((d2.avskrivningsprocent||0) / 100);
-  const amortering = (d2.belaaning||0) * ((d2.amorteringsprocent||0) / 100);
+  const amortering = (d2.belaaning||0) * ((d2.amorteringsprocent ?? 4.0) / 100);
   const resForeskatt = driftnetto - avskrivning - ranta;
   const skatt = resForeskatt > 0 ? resForeskatt * ((d2.skattesats||0) / 100) : 0;
   const kassaflode = (resForeskatt - skatt) + avskrivning;
@@ -1019,7 +1019,7 @@ function Proforma({ propertyId }) {
           <Row label={"Skatt ("+fmtPct(d2.skattesats||0)+")"} value={"– "+fmtKkr(skatt)} />
           <Row label="Kassaflöde" value={fmtKkr(kassaflode)} highlight />
           <div style={{ marginTop:8 }} />
-          <Row label={`Amortering (${fmtPct(d2.amorteringsprocent||0)} på lån)`} value={"– "+fmtKkr(amortering)} sub={fmtKkr(d2.belaaning||0)+" i belåning"} />
+          <Row label={`Amortering (${fmtPct(d2.amorteringsprocent ?? 4.0)} på lån)`} value={"– "+fmtKkr(amortering)} sub={fmtKkr(d2.belaaning||0)+" i belåning"} />
           <Row label="Kassaflöde efter amortering" value={fmtKkr(kassaflodeEfterAmortering)} highlight />
         </Section>
       </div>
