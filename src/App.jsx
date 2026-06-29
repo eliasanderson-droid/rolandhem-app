@@ -263,11 +263,11 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
       </div>}
       <label style={labelStyle}>Anmälningsdatum</label>
       <input type="date" value={issueForm.reported||""} onChange={e=>setIssueForm({...issueForm,reported:e.target.value})} style={{...inputStyle,maxWidth:"50%"}} />
-      <label style={labelStyle}>Bild (valfritt)</label>
+      <label style={labelStyle}>Ladda upp bild eller dokument</label>
       <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
-        <input type="file" onChange={async e=>{ const file=e.target.files[0]; if(!file) return; try { const path=`${issueForm.property_id}/${Date.now()}_${file.name}`; const url=await uploadFile(file,"issue-images",path); setIssueForm(f=>({...f,image_url:url})); } catch(err){ alert("Uppladdning misslyckades"); } }} style={{ display:"none" }} id="dash-issue-img" accept="image/*,.pdf,.doc,.docx" />
+        <input type="file" onChange={async e=>{ const file=e.target.files[0]; if(!file) return; try { const path=`${issueForm.property_id||"misc"}/${Date.now()}_${file.name}`; const url=await uploadFile(file,"issue-images",path); setIssueForm(f=>({...f,image_url:url})); } catch(err){ alert("Uppladdning misslyckades: "+err.message); } }} style={{ display:"none" }} id="dash-issue-img" accept="image/*,.pdf,.doc,.docx,.xlsx" />
         <label htmlFor="dash-issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📎 Välj bild eller dokument</label>
-        {issueForm.image_url&&<img src={issueForm.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
+        {issueForm.image_url&&<div style={{ marginTop:8 }}>{issueForm.image_url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)?<img src={issueForm.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8 }} />:<a href={issueForm.image_url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13 }}>📄 Fil uppladdad – klicka för att öppna</a>}</div>}
       </div>
       <div style={{ display:"flex", gap:10, marginTop:4 }}>
         <button onClick={saveIssue} disabled={saving||!issueForm.title} style={{ ...btnStyle(G), opacity:!issueForm.title?0.5:1 }}>{saving?"Sparar…":issueForm._editing?"💾 Spara ändringar":"💾 Spara felanmälan"}</button>
