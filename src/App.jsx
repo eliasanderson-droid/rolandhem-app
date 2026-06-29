@@ -114,6 +114,51 @@ async function uploadFile(file, bucket, path) {
   return url.publicUrl;
 }
 
+
+// ── MULTI FILE UPLOAD ─────────────────────────────────────────────────────────
+function FileUpload({ files=[], onChange, bucket="issue-images", folder="misc" }) {
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFiles(e) {
+    const selected = Array.from(e.target.files);
+    if (!selected.length) return;
+    setUploading(true);
+    const uploaded = [...files];
+    for (const file of selected) {
+      try {
+        const path = `${folder}/${Date.now()}_${file.name}`;
+        const url = await uploadFile(file, bucket, path);
+        uploaded.push({ url, name:file.name });
+      } catch(err) { alert("Uppladdning misslyckades: " + err.message); }
+    }
+    onChange(uploaded);
+    setUploading(false);
+  }
+
+  function remove(idx) { onChange(files.filter((_,i)=>i!==idx)); }
+
+  const isImage = url => /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url);
+
+  return <div>
+    <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:10,background:"#f0faf4" }}>
+      <input type="file" multiple onChange={handleFiles} style={{ display:"none" }} id={`fu-${folder}`} accept="image/*,.pdf,.doc,.docx,.xlsx" />
+      <label htmlFor={`fu-${folder}`} style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>
+        {uploading?"Laddar upp…":"📎 Välj filer (flera tillåtna)"}
+      </label>
+    </div>
+    {files.length>0&&<div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:12 }}>
+      {files.map((f,i)=><div key={i} style={{ display:"flex",alignItems:"center",gap:10,background:"#f8f9fb",borderRadius:8,padding:"8px 12px" }}>
+        <div style={{ flex:1,minWidth:0 }}>
+          {isImage(f.url)
+            ?<img src={f.url} alt="" style={{ width:"100%",maxHeight:140,objectFit:"cover",borderRadius:6 }} />
+            :<a href={f.url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13,textDecoration:"none" }}>📄 {f.name||"Dokument"}</a>}
+        </div>
+        <button onClick={()=>remove(i)} style={{ background:"none",border:"none",cursor:"pointer",color:"#aaa",fontSize:18,flexShrink:0,padding:"0 4px" }}>✕</button>
+      </div>)}
+    </div>}
+  </div>;
+}
+
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function Dashboard({ tenants, contracts, issues, properties, selectedProperty, onIssueAdded }) {
   const d = useIsDesktop();
@@ -131,24 +176,25 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     const propId = selectedProperty?.id || properties[0]?.id;
     const { data } = await sb.from("tenants").select("id,unit,name,property_id").order("unit");
     setPropTenants(data||[]);
-    setIssueForm({ property_id: propId, unit:"", title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"" });
+    setIssueForm({ property_id: propId, unit:"", title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"", files:[] });
     setShowIssueForm(true);
   }
 
   async function openEditIssue(issue) {
     const { data } = await sb.from("tenants").select("id,unit,name,property_id").order("unit");
     setPropTenants(data||[]);
-    setIssueForm({...issue, _editing:true});
+    setIssueForm({...issue, files:issue.files||[], _editing:true});
   }
 
   async function saveIssue() {
     if (!issueForm.title) return;
     setSaving(true);
     if (issueForm._editing && issueForm.id) {
-      const { _editing, ...item } = issueForm;
-      await sb.from("issues").update(item).eq("id", issueForm.id);
+      const { _editing, image_url, ...item } = issueForm;
+      await sb.from("issues").update({...item,files:issueForm.files||[]}).eq("id", issueForm.id);
     } else {
-      await sb.from("issues").insert([issueForm]);
+      const { image_url, ...item } = issueForm;
+      await sb.from("issues").insert([{...item,files:issueForm.files||[]}]);
     }
     setSaving(false); setShowIssueForm(false); setIssueForm(null);
     if (onIssueAdded) onIssueAdded();
@@ -264,11 +310,7 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
       <label style={labelStyle}>Anmälningsdatum</label>
       <input type="date" value={issueForm.reported||""} onChange={e=>setIssueForm({...issueForm,reported:e.target.value})} style={{...inputStyle,maxWidth:"50%"}} />
       <label style={labelStyle}>Ladda upp bild eller dokument</label>
-      <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
-        <input type="file" onChange={async e=>{ const file=e.target.files[0]; if(!file) return; try { const path=`${issueForm.property_id||"misc"}/${Date.now()}_${file.name}`; const url=await uploadFile(file,"issue-images",path); setIssueForm(f=>({...f,image_url:url})); } catch(err){ alert("Uppladdning misslyckades: "+err.message); } }} style={{ display:"none" }} id="dash-issue-img" accept="image/*,.pdf,.doc,.docx,.xlsx" />
-        <label htmlFor="dash-issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📎 Välj bild eller dokument</label>
-        {issueForm.image_url&&<div style={{ marginTop:8 }}>{issueForm.image_url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)?<img src={issueForm.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8 }} />:<a href={issueForm.image_url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13 }}>📄 Fil uppladdad – klicka för att öppna</a>}</div>}
-      </div>
+      <FileUpload files={issueForm.files||[]} onChange={v=>setIssueForm(f=>({...f,files:v}))} bucket="issue-images" folder={issueForm.property_id||"misc"} />
       <div style={{ display:"flex", gap:10, marginTop:4 }}>
         <button onClick={saveIssue} disabled={saving||!issueForm.title} style={{ ...btnStyle(G), opacity:!issueForm.title?0.5:1 }}>{saving?"Sparar…":issueForm._editing?"💾 Spara ändringar":"💾 Spara felanmälan"}</button>
         <button onClick={()=>{ setShowIssueForm(false); setIssueForm(null); }} style={btnStyle("#888")}>Avbryt</button>
@@ -626,7 +668,8 @@ function TenantIssues({ tenant }) {
   }
   async function save() {
     if (!form.title) return;
-    const item = {...form, property_id:tenant.property_id, unit:tenant.unit};
+    const { image_url:_old, ...rest } = form;
+    const item = {...rest, property_id:tenant.property_id, unit:tenant.unit, files:form.files||[]};
     if (form.id) await sb.from("issues").update(item).eq("id", form.id);
     else await sb.from("issues").insert([item]);
     setForm(null); load();
@@ -641,7 +684,7 @@ function TenantIssues({ tenant }) {
     } catch(err) { alert("Uppladdning misslyckades"); }
   }
 
-  const blank = { property_id:tenant.property_id, unit:tenant.unit, title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"", image_url:"" };
+  const blank = { property_id:tenant.property_id, unit:tenant.unit, title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"", files:[] };
   if (loading) return <Spinner />;
   return <div>
     <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
@@ -660,7 +703,7 @@ function TenantIssues({ tenant }) {
         </div>
         {i.description&&<div style={{ fontSize:13,color:"#666",marginTop:6 }}>{i.description}</div>}
         {i.resolution&&i.status==="åtgärdad"&&<div style={{ marginTop:6,padding:"6px 10px",background:"#f0faf4",borderRadius:6,borderLeft:"3px solid #22c55e",fontSize:13,color:"#16a34a" }}>✓ {i.resolution}</div>}
-        {i.image_url&&<img src={i.image_url} alt="bild" style={{ width:"100%",maxHeight:200,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
+        {(i.files||[]).length>0&&<div style={{ display:"flex",flexDirection:"column",gap:6,marginTop:8 }}>{(i.files||[]).map((f,idx)=>/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)?<img key={idx} src={f.url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:6 }} />:<a key={idx} href={f.url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13,textDecoration:"none",display:"block" }}>📄 {f.name||"Dokument"}</a>)}</div>}
         <div style={{ fontSize:12,color:"#aaa",marginTop:6 }}>Anmält {i.reported}</div>
       </div>
     </Card>)}
@@ -668,11 +711,7 @@ function TenantIssues({ tenant }) {
       <label style={labelStyle}>Rubrik</label><input value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})} style={inputStyle} />
       <label style={labelStyle}>Beskrivning</label><textarea value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})} style={{...inputStyle,height:60,resize:"vertical"}} />
       <label style={labelStyle}>Ladda upp bild eller dokument</label>
-      <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
-        <input type="file" onChange={handleImage} style={{ display:"none" }} id="issue-img" accept="image/*,.pdf,.doc,.docx,.xlsx" />
-        <label htmlFor="issue-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>📎 Välj bild eller dokument</label>
-        {form.image_url&&<div style={{ marginTop:8 }}>{form.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i)?<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8 }} />:<a href={form.image_url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13 }}>📄 Dokument uppladdad – klicka för att öppna</a>}</div>}
-      </div>
+      <FileUpload files={form.files||[]} onChange={v=>setForm({...form,files:v})} bucket="issue-images" folder={`${tenant.property_id}/${tenant.unit}`} />
       <div style={{ display:"flex",gap:12 }}>
         <div style={{ flex:1 }}><label style={labelStyle}>Prioritet</label><select value={form.priority||"medel"} onChange={e=>setForm({...form,priority:e.target.value})} style={inputStyle}>{["låg","medel","hög"].map(p=><option key={p} value={p}>{p}</option>)}</select></div>
         <div style={{ flex:1 }}><label style={labelStyle}>Status</label><select value={form.status||"ny"} onChange={e=>setForm({...form,status:e.target.value})} style={inputStyle}>{["ny","pågående","åtgärdad"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
@@ -806,7 +845,8 @@ function Maintenance({ propertyId, properties }) {
   }
   async function save() {
     if (!form.title) return;
-    const item = {...form, property_id:propertyId};
+    const { image_url:_oldm, ...restm } = form;
+    const item = {...restm, property_id:propertyId, files:form.files||[]};
     if (form.id) await sb.from("issues").update(item).eq("id", form.id);
     else await sb.from("issues").insert([item]);
     setForm(null); load();
@@ -824,7 +864,7 @@ function Maintenance({ propertyId, properties }) {
   }
 
   const filtered = issues.filter(i => filter==="alla"||i.status===filter);
-  const blank = { property_id:propertyId, unit:"", title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"", image_url:"" };
+  const blank = { property_id:propertyId, unit:"", title:"", description:"", priority:"medel", status:"ny", reported:new Date().toISOString().slice(0,10), assignee:"", files:[] };
 
   if (loading) return <Spinner />;
   return <div>
@@ -846,7 +886,7 @@ function Maintenance({ propertyId, properties }) {
           </div>
           {i.description&&<div style={{ fontSize:13,color:"#666",marginTop:6 }}>{i.description}</div>}
           {i.resolution&&i.status==="åtgärdad"&&<div style={{ marginTop:6,padding:"6px 10px",background:"#f0faf4",borderRadius:6,borderLeft:"3px solid #22c55e",fontSize:13,color:"#16a34a" }}>✓ {i.resolution}</div>}
-          {i.image_url&&<img src={i.image_url} alt="bild" style={{ width:"100%",maxHeight:200,objectFit:"cover",borderRadius:8,marginTop:8 }} />}
+          {(i.files||[]).length>0&&<div style={{ display:"flex",flexDirection:"column",gap:6,marginTop:8 }}>{(i.files||[]).map((f,idx)=>/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(f.url)?<img key={idx} src={f.url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:6 }} />:<a key={idx} href={f.url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13,textDecoration:"none",display:"block" }}>📄 {f.name||"Dokument"}</a>)}</div>}
           <div style={{ fontSize:12,color:"#aaa",marginTop:8 }}>Lgh {i.unit}{ten?.name?` · ${ten.name}`:""} · {i.reported}</div>
         </div>
       </Card>;
@@ -858,11 +898,7 @@ function Maintenance({ propertyId, properties }) {
       <label style={labelStyle}>Rubrik</label><input value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})} style={inputStyle} />
       <label style={labelStyle}>Beskrivning</label><textarea value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})} style={{...inputStyle,height:72,resize:"vertical"}} />
       <label style={labelStyle}>Ladda upp bild eller dokument</label>
-      <div style={{ border:"2px dashed #c8e6c9",borderRadius:10,padding:16,textAlign:"center",marginBottom:12,background:"#f0faf4" }}>
-        <input type="file" onChange={handleImage} style={{ display:"none" }} id="maint-img" accept="image/*,.pdf,.doc,.docx,.xlsx" />
-        <label htmlFor="maint-img" style={{ cursor:"pointer",color:G,fontWeight:600,fontSize:14 }}>{uploading?"Laddar upp…":"📎 Välj bild eller dokument"}</label>
-        {form.image_url&&<div style={{ marginTop:8 }}>{form.image_url.match(/\.(jpg|jpeg|png|gif|webp)$/i)?<img src={form.image_url} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:8 }} />:<a href={form.image_url} target="_blank" rel="noreferrer" style={{ color:G,fontWeight:600,fontSize:13 }}>📄 Fil uppladdad – klicka för att öppna</a>}</div>}
-      </div>
+      <FileUpload files={form.files||[]} onChange={v=>setForm({...form,files:v})} bucket="issue-images" folder={String(propertyId)} />
       <div style={{ display:"flex",gap:12 }}>
         <div style={{ flex:1 }}><label style={labelStyle}>Prioritet</label><select value={form.priority||"medel"} onChange={e=>setForm({...form,priority:e.target.value})} style={inputStyle}>{["låg","medel","hög"].map(p=><option key={p} value={p}>{p}</option>)}</select></div>
         <div style={{ flex:1 }}><label style={labelStyle}>Status</label><select value={form.status||"ny"} onChange={e=>setForm({...form,status:e.target.value})} style={inputStyle}>{["ny","pågående","åtgärdad"].map(s=><option key={s} value={s}>{s}</option>)}</select></div>
