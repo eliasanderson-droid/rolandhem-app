@@ -17,8 +17,12 @@ const fmt = n => Math.round(Number(n||0)).toLocaleString("sv-SE") + " kr";
 const fmtKkr = v => Math.round(v/1000).toLocaleString("sv-SE") + " kkr";
 const fmtPct = v => { const n = Number(v); return (Number.isInteger(n) ? n.toFixed(0) : n.toFixed(2).replace(/\.?0+$/, "")) + "%"; };
 
-const statusColor = { ny:"#6366f1", pågående:"#f59e0b", åtgärdad:"#22c55e", aktiv:"#22c55e", inaktiv:"#94a3b8" };
-const priorityColor = { hög:"#ef4444", medel:"#f59e0b", låg:"#22c55e" };
+const statusColor = { ny:"#6366f1", pågående:"#d97706", åtgärdad:"#16a34a", aktiv:"#16a34a", inaktiv:"#94a3b8" };
+const statusBg = { ny:"#eef2ff", pågående:"#fff7ed", åtgärdad:"#f0fdf4" };
+const statusBorder = { ny:"#c7d2fe", pågående:"#fed7aa", åtgärdad:"#bbf7d0" };
+const priorityColor = { hög:"#dc2626", medel:"#d97706", låg:"#16a34a" };
+const priorityBg = { hög:"#fef2f2", medel:"#fff7ed", låg:"#f0fdf4" };
+const priorityBorder = { hög:"#fecaca", medel:"#fed7aa", låg:"#bbf7d0" };
 const conditionColors = { "mycket bra":"#22c55e", "bra":"#6fcf97", "godkänt":"#f59e0b", "anmärkningar":"#ef4444" };
 const catIcons = { "VVS":"🔧","El":"⚡","Bygg":"🏗️","Städ":"🧹","Lås":"🔐","Mark/Trädgård":"🌿","Hiss":"🛗","Ventilation":"💨","Försäkring":"🛡️","Juridik":"⚖️","Övrigt":"📋" };
 const inspRooms = ["Hall","Kök","Vardagsrum","Sovrum 1","Sovrum 2","Badrum","WC","Balkong","Förråd"];
@@ -1761,12 +1765,18 @@ export default function App() {
     setAllContracts(cRes.data||[]);
   }
 
-  // Realtime: reload issues whenever any issue changes anywhere in the app
+  // Realtime: reload data whenever issues, tenants or contracts change anywhere in the app
   useEffect(() => {
     if (!session) return;
-    const channel = sb.channel("issues-changes")
+    const channel = sb.channel("app-changes")
       .on("postgres_changes", { event:"*", schema:"public", table:"issues" }, () => {
         sb.from("issues").select("*").then(({ data }) => setAllIssues(data||[]));
+      })
+      .on("postgres_changes", { event:"*", schema:"public", table:"tenants" }, () => {
+        sb.from("tenants").select("*").then(({ data }) => setAllTenants(data||[]));
+      })
+      .on("postgres_changes", { event:"*", schema:"public", table:"contracts" }, () => {
+        sb.from("contracts").select("*").then(({ data }) => setAllContracts(data||[]));
       })
       .subscribe();
     return () => sb.removeChannel(channel);
@@ -1777,9 +1787,9 @@ export default function App() {
   const filteredIssues = selectedProperty ? allIssues.filter(i=>i.property_id===selectedProperty.id) : allIssues;
   const filteredContracts = selectedProperty ? allContracts.filter(c=>filteredTenants.some(t=>t.id===c.tenant_id)) : allContracts;
 
-  function goToProperty(id) { setNav({ type:"property", propertyId:id, tab:"overview" }); }
-  function goToTab(id, tab) { setNav({ type:"property", propertyId:id, tab }); setSidebarOpen(false); }
-  function goOverview() { setNav({ type:"overview" }); setSidebarOpen(false); }
+  function goToProperty(id) { setNav({ type:"property", propertyId:id, tab:"overview" }); loadGlobal(); }
+  function goToTab(id, tab) { setNav({ type:"property", propertyId:id, tab }); setSidebarOpen(false); if (tab==="overview") loadGlobal(); }
+  function goOverview() { setNav({ type:"overview" }); setSidebarOpen(false); loadGlobal(); }
   function goContacts() { setNav({ type:"contacts" }); setSidebarOpen(false); }
   function goSearch() { setNav({ type:"search" }); setSidebarOpen(false); }
 
