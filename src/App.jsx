@@ -274,7 +274,7 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
           {recent.length===0?<div style={{ color:"#aaa" }}>Inga ärenden.</div>:recent.map(i=>{
             const prop=properties.find(p=>p.id===i.property_id);
-            return <div key={i.id} onClick={()=>openEditIssue(i)} style={{ borderLeft:`3px solid ${priorityColor[i.priority]}`, paddingLeft:12, cursor:"pointer", padding:"8px 12px", borderRadius:8, background:"#fafafa", borderLeft:`3px solid ${priorityColor[i.priority]}`, transition:"background 0.1s" }} onMouseEnter={e=>e.currentTarget.style.background="#f0faf4"} onMouseLeave={e=>e.currentTarget.style.background="#fafafa"}>
+            return <div key={i.id} onClick={()=>openEditIssue(i)} style={{ borderLeft:`3px solid ${priorityColor[i.priority]}`, paddingLeft:12, cursor:"pointer", padding:"8px 12px", borderRadius:8, background:priorityBg[i.priority]||"#fafafa", border:`1px solid ${priorityBorder[i.priority]||"#eee"}`, borderLeftWidth:3, borderLeftColor:priorityColor[i.priority], transition:"filter 0.1s" }} onMouseEnter={e=>e.currentTarget.style.filter="brightness(0.97)"} onMouseLeave={e=>e.currentTarget.style.filter="none"}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
                 <div style={{ fontWeight:600, color:G, fontSize:14 }}>{i.title}</div>
                 <span style={{ color:"#d1d5db", fontSize:14, marginLeft:8 }}>›</span>
@@ -1329,7 +1329,7 @@ function RentLog({ propertyId, properties }) {
     setLoadingLogs(true);
     const [lRes, tRes] = await Promise.all([
       sb.from("rent_log").select("*").eq("property_id", propertyId).order("effective_date", {ascending:false}),
-      sb.from("tenants").select("id,unit,name,rent").eq("property_id", propertyId).order("unit"),
+      sb.from("tenants").select("id,unit,name,rent,sqm").eq("property_id", propertyId).order("unit"),
     ]);
     setLogs(lRes.data||[]); setTenants(tRes.data||[]); setLoadingLogs(false);
   }
@@ -1338,7 +1338,7 @@ function RentLog({ propertyId, properties }) {
   async function loadPreview(propId, percent) {
     if (!propId || !percent) { setPreviewTenants([]); return; }
     setLoading(true);
-    const { data } = await sb.from("tenants").select("id,unit,name,rent").eq("property_id", propId).order("unit");
+    const { data } = await sb.from("tenants").select("id,unit,name,rent,sqm").eq("property_id", propId).order("unit");
     setPreviewTenants((data||[]).map(t => ({
       ...t,
       new_rent: Math.round(t.rent * (1 + Number(percent)/100))
@@ -1474,10 +1474,13 @@ function RentLog({ propertyId, properties }) {
             <div style={{ display:"grid",gridTemplateColumns:d?"1fr 1fr 1fr":"1fr 1fr",gap:6 }}>
               {g.items.map(i=>{
                 const t=tenants.find(x=>x.id===i.tenant_id);
+                const sqmOld = t?.sqm ? Math.round((i.old_rent*12)/t.sqm) : null;
+                const sqmNew = t?.sqm ? Math.round((i.new_rent*12)/t.sqm) : null;
                 return <div key={i.id} style={{ background:"#f8f9fb",borderRadius:8,padding:"8px 12px",fontSize:13 }}>
                   <span style={{ fontWeight:600,color:G }}>Lgh {t?.unit||"–"}</span>
                   <span style={{ color:"#888",marginLeft:6 }}>{t?.name||"–"}</span>
                   <div style={{ color:"#aaa",fontSize:12 }}>{fmt(i.old_rent)} → {fmt(i.new_rent)}</div>
+                  {t?.sqm&&<div style={{ color:"#bbb",fontSize:11,marginTop:1 }}>{sqmOld} → {sqmNew} kr/m²/år</div>}
                 </div>;
               })}
             </div>
@@ -1514,10 +1517,14 @@ function RentLog({ propertyId, properties }) {
           Förhandsgranskning – justera enskilda lägenheter
         </div>
         <div style={{ background:"#f8f9fb",borderRadius:10,padding:12,marginBottom:14 }}>
-          {previewTenants.map((t,i)=><div key={t.id} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #eee",gap:12 }}>
+          {previewTenants.map((t,i)=>{
+            const sqmYearOld = t.sqm ? Math.round((t.rent*12)/t.sqm) : null;
+            const sqmYearNew = t.sqm ? Math.round((t.new_rent*12)/t.sqm) : null;
+            return <div key={t.id} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #eee",gap:12 }}>
             <div style={{ flex:1,minWidth:0 }}>
               <div style={{ fontSize:13,fontWeight:600,color:G }}>Lgh {t.unit}</div>
               <div style={{ fontSize:12,color:"#888" }}>{t.name||"Vakant"} · {fmt(t.rent)}</div>
+              {t.sqm&&<div style={{ fontSize:11,color:"#aaa",marginTop:2 }}>{sqmYearOld} kr/m²/år → <span style={{ color:G,fontWeight:600 }}>{sqmYearNew} kr/m²/år</span></div>}
             </div>
             <div style={{ display:"flex",alignItems:"center",gap:8,flexShrink:0 }}>
               <span style={{ fontSize:12,color:"#aaa" }}>→</span>
@@ -1529,7 +1536,8 @@ function RentLog({ propertyId, properties }) {
               />
               <span style={{ fontSize:12,color:"#aaa" }}>kr</span>
             </div>
-          </div>)}
+          </div>;
+          })}
           <div style={{ display:"flex",justifyContent:"space-between",marginTop:10,fontWeight:700,color:G,fontSize:15 }}>
             <span>Total ökning/mån</span>
             <span>+{fmt(previewTenants.reduce((s,t)=>s+(t.new_rent-t.rent),0))}</span>
