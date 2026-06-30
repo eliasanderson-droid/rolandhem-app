@@ -172,6 +172,9 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
   const [issueForm, setIssueForm] = useState(null);
   const [propTenants, setPropTenants] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [listingModal, setListingModal] = useState(null);
+  const [listingTenant, setListingTenant] = useState(null);
+  const [listingLoading, setListingLoading] = useState(false);
 
   useEffect(() => {
     sb.from("proformas").select("property_id,data").then(({ data }) => setProformas(data||[]));
@@ -187,6 +190,35 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");a.href=url;a.download=`felanmälan-${(issue.title||"arende").replace(/\s+/g,"-")}.html`;a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function openListingModal(c) {
+    setListingLoading(true);
+    setListingModal(c);
+    const { data } = await sb.from("tenants").select("*").eq("id", c.tenantId).single();
+    setListingTenant(data);
+    setListingLoading(false);
+  }
+
+  function generateListingText(c, t) {
+    const prop = properties.find(p=>p.id===c.propertyId);
+    const moveInDate = c.leaseEnd ? new Date(new Date(c.leaseEnd).getTime()+86400000).toLocaleDateString("sv-SE") : "enligt överenskommelse";
+    const rent = t?.rent ? fmt(t.rent) : "enligt överenskommelse";
+    const extras = [];
+    if (t?.balcony) extras.push("Balkong");
+    if (t?.parking) extras.push(`Bilplats${t?.parking_cost?` (${fmt(t.parking_cost)}/mån)`:""}`);
+    return `🏠 Ledig lägenhet – ${prop?.name||""}, ${prop?.address?.split(",").pop()?.trim()||"Nora"}
+
+${t?.sqm?t.sqm+" m²":""}${t?.floor!=null?` · ${t.floor} tr`:""}
+Ledig från: ${moveInDate}
+Hyra: ${rent}/mån
+
+Lägenheten ligger på ${prop?.name||""} i ${prop?.address?.split(",").pop()?.trim()||"Nora"}, ett lugnt och trivsamt område med närhet till service, butiker och kommunikationer.
+${extras.length>0?`\nTill lägenheten hör:\n${extras.map(e=>"✓ "+e).join("\n")}\n`:""}
+Varmt välkommen med din intresseanmälan!
+
+Kontakt: [telefonnummer/e-post]
+Uthyrare: [fastighetsbolag]`;
   }
 
   async function openIssueForm() {
@@ -231,11 +263,11 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
 
   const expiringSoon = [
     ...contracts
-      .filter(c => { const x=daysUntil(c.end_date); return x!=null&&x>=0&&x<=90; })
-      .map(c => { const t=tenants.find(x=>x.id===c.tenant_id), p=properties.find(x=>x.id===t?.property_id), days=daysUntil(c.end_date); return { key:c.id, name:t?.name, prop:p?.name, unit:t?.unit, days }; }),
+      .filter(c => { const x=daysUntil(c.end_date); return x!=null&&x>=0&&x<=120; })
+      .map(c => { const t=tenants.find(x=>x.id===c.tenant_id), p=properties.find(x=>x.id===t?.property_id), days=daysUntil(c.end_date); return { key:c.id, name:t?.name, prop:p?.name, unit:t?.unit, days, tenantId:t?.id, propertyId:t?.property_id, leaseEnd:c.end_date }; }),
     ...tenants
-      .filter(t => { const x=daysUntil(t.lease_end); return x!=null&&x>=0&&x<=90&&!contracts.some(c=>c.tenant_id===t.id&&c.end_date===t.lease_end); })
-      .map(t => { const p=properties.find(x=>x.id===t.property_id), days=daysUntil(t.lease_end); return { key:"t-"+t.id, name:t.name, prop:p?.name, unit:t.unit, days }; })
+      .filter(t => { const x=daysUntil(t.lease_end); return x!=null&&x>=0&&x<=120&&!contracts.some(c=>c.tenant_id===t.id&&c.end_date===t.lease_end); })
+      .map(t => { const p=properties.find(x=>x.id===t.property_id), days=daysUntil(t.lease_end); return { key:"t-"+t.id, name:t.name, prop:p?.name, unit:t.unit, days, tenantId:t.id, propertyId:t.property_id, leaseEnd:t.lease_end }; })
   ].sort((a,b)=>a.days-b.days);
   const recent = [...issues].sort((a,b)=>(b.reported||"").localeCompare(a.reported||"")).slice(0,4);
 
@@ -290,10 +322,13 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
       </Card>
       <Card>
         <h3 style={{ fontSize:15, fontWeight:700, color:G, marginBottom:16 }}>Kontrakt som löper ut</h3>
-        {expiringSoon.length===0?<div style={{ color:"#aaa" }}>Inga inom 90 dagar.</div>:expiringSoon.map(c=>{
-          return <div key={c.key} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f5f5f5" }}>
+        {expiringSoon.length===0?<div style={{ color:"#aaa" }}>Inga inom 120 dagar.</div>:expiringSoon.map(c=>{
+          return <div key={c.key} onClick={()=>openListingModal(c)} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f5f5f5", cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background="#fafafa"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
             <div><div style={{ fontWeight:600 }}>{c.name}</div><div style={{ fontSize:12, color:"#888" }}>{c.prop} · Lgh {c.unit}</div></div>
-            <Badge label={`${c.days} dagar`} color={c.days<30?"#ef4444":"#f59e0b"} />
+            <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+              <Badge label={`${c.days} dagar`} color={c.days<30?"#dc2626":"#d97706"} />
+              <span style={{ color:"#d1d5db", fontSize:14 }}>›</span>
+            </div>
           </div>;
         })}
       </Card>
@@ -341,6 +376,23 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
         {issueForm._editing&&<button onClick={()=>downloadIssueFromDash(issueForm)} style={{ ...btnStyle("#6366f1"),padding:"9px 14px",fontSize:14 }}>⬇️ Ladda ner</button>}
         <button onClick={()=>{ setShowIssueForm(false); setIssueForm(null); }} style={btnStyle("#888")}>Avbryt</button>
       </div>
+    </Modal>}
+
+    {/* Listing text generator modal */}
+    {listingModal&&<Modal title="📢 Annonstext" onClose={()=>{ setListingModal(null); setListingTenant(null); }}>
+      {listingLoading?<Spinner />:<>
+        <div style={{ fontSize:13,color:"#888",marginBottom:12 }}>Lgh {listingModal.unit} · {listingModal.prop} · Ledig om {listingModal.days} dagar</div>
+        <textarea
+          readOnly
+          value={generateListingText(listingModal, listingTenant)}
+          style={{ width:"100%",height:320,padding:"14px",borderRadius:10,border:"1px solid #e0e0e0",fontSize:14,lineHeight:1.6,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box",background:"#fafafa",color:"#333" }}
+        />
+        <div style={{ display:"flex",gap:10,marginTop:14 }}>
+          <button onClick={()=>{ navigator.clipboard.writeText(generateListingText(listingModal,listingTenant)); }} style={btnStyle(G)}>📋 Kopiera text</button>
+          <button onClick={()=>{ setListingModal(null); setListingTenant(null); }} style={btnStyle("#888")}>Stäng</button>
+        </div>
+        <div style={{ marginTop:12,fontSize:12,color:"#aaa" }}>💡 Kom ihåg att fylla i kontaktuppgifter och fastighetsbolag innan publicering.</div>
+      </>}
     </Modal>}
   </div>;
 }
