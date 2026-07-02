@@ -1820,15 +1820,8 @@ function Intresse({ propertyId }) {
       <div>Inga intresseanmälningar ännu.</div>
     </div>}
 
-    <div style={{ position:"relative", paddingLeft:32 }}>
-      {/* Vertical timeline line */}
-      <div style={{ position:"absolute", left:11, top:8, bottom:8, width:2, background:"#e8f5e9", borderRadius:2 }} />
-
-      {list.map((i,idx)=><div key={i.id} style={{ position:"relative", marginBottom:20 }}>
-        {/* Timeline dot */}
-        <div style={{ position:"absolute", left:-32, top:18, width:12, height:12, borderRadius:"50%", background:G, border:"2px solid #6fcf97", flexShrink:0 }} />
-
-        <Card style={{ padding:18 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+      {list.map((i,idx)=><Card key={i.id} style={{ padding:18 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontWeight:700, fontSize:15, color:G }}>{i.name}</div>
@@ -1852,8 +1845,7 @@ function Intresse({ propertyId }) {
           {i.comment&&<div style={{ marginTop:8, padding:"8px 12px", background:"#fffbeb", borderRadius:8, borderLeft:"3px solid #fbbf24", fontSize:13, color:"#92400e" }}>
             📝 {i.comment}
           </div>}
-        </Card>
-      </div>)}
+        </Card>)}
     </div>
 
     {form&&<Modal title={form.id?"Redigera anmälan":"Ny intresseanmälan"} onClose={()=>setForm(null)}>
