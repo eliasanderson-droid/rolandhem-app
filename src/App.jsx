@@ -55,7 +55,7 @@ function Modal({ title, children, onClose }) {
   </div>;
 }
 function NavRow({ icon, label, active, badge, onClick }) {
-  return <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:9, width:"100%", padding:"9px 16px", margin:"1px 0", background:active?"rgba(111,207,151,0.15)":"none", border:"none", borderLeft:active?"3px solid #6fcf97":"3px solid transparent", color:active?"#6fcf97":"rgba(255,255,255,0.6)", fontSize:14, fontWeight:active?700:400, cursor:"pointer", textAlign:"left" }}>
+  return <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:9, width:"100%", padding:"9px 16px", margin:"1px 0", background:active?"rgba(111,207,151,0.15)":"none", border:"none", borderLeft:active?"3px solid #6fcf97":"3px solid transparent", color:active?"#6fcf97":"rgba(255,255,255,0.6)", fontSize:18, fontWeight:active?700:400, cursor:"pointer", textAlign:"left" }}>
     <span style={{ fontSize:15 }}>{icon}</span>
     <span style={{ flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{label}</span>
     {badge>0&&<span style={{ background:"#ef4444", color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:11, fontWeight:700 }}>{badge}</span>}
@@ -680,7 +680,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
       </div>
     </Card>
     <div style={{ display:"flex",gap:4,marginBottom:20,background:"#f0f0f0",borderRadius:10,padding:4 }}>
-      {tabs.map(([id,icon,label])=><button key={id} onClick={()=>setTab(id)} style={{ flex:1,padding:"8px 4px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,background:tab===id?"#fff":"none",color:tab===id?G:"#888",boxShadow:tab===id?"0 1px 4px rgba(0,0,0,0.1)":"none" }}>{icon} {label}</button>)}
+      {tabs.map(([id,icon,label])=><button key={id} onClick={()=>setTab(id)} style={{ flex:1,padding:"8px 4px",borderRadius:8,border:"none",cursor:"pointer",fontSize:16,fontWeight:700,background:tab===id?"#fff":"none",color:tab===id?G:"#888",boxShadow:tab===id?"0 1px 4px rgba(0,0,0,0.1)":"none" }}>{icon} {label}</button>)}
     </div>
     {tab==="info"&&<div style={{ display:"flex",flexDirection:"column",gap:16 }}>
       <Card>
@@ -2110,7 +2110,7 @@ export default function App() {
               {SUBTABS.map(st=>{
                 const isActive=nav.tab===st.id;
                 const stBadge=st.id==="maintenance"?allIssues.filter(i=>i.property_id===p.id&&i.status!=="åtgärdad").length:0;
-                return <button key={st.id} onClick={()=>goToTab(p.id,st.id)} style={{ display:"flex",alignItems:"center",gap:7,width:"100%",padding:"7px 10px 7px 12px",borderRadius:7,marginBottom:1,background:isActive?"rgba(111,207,151,0.18)":"transparent",border:"none",borderLeft:isActive?"2px solid #6fcf97":"2px solid transparent",color:isActive?"#6fcf97":"rgba(255,255,255,0.4)",fontSize:13,fontWeight:isActive?700:400,cursor:"pointer",textAlign:"left",transition:"background 0.1s" }}>
+                return <button key={st.id} onClick={()=>goToTab(p.id,st.id)} style={{ display:"flex",alignItems:"center",gap:7,width:"100%",padding:"7px 10px 7px 12px",borderRadius:7,marginBottom:1,background:isActive?"rgba(111,207,151,0.18)":"transparent",border:"none",borderLeft:isActive?"2px solid #6fcf97":"2px solid transparent",color:isActive?"#6fcf97":"rgba(255,255,255,0.4)",fontSize:16,fontWeight:isActive?700:400,cursor:"pointer",textAlign:"left",transition:"background 0.1s" }}>
                   <span style={{ fontSize:12,opacity:isActive?1:0.7 }}>{st.icon}</span>
                   <span style={{ flex:1 }}>{st.label}</span>
                   {stBadge>0&&<span style={{ background:"#ef4444",color:"#fff",borderRadius:10,padding:"1px 5px",fontSize:10,fontWeight:700 }}>{stBadge}</span>}
