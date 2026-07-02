@@ -1773,6 +1773,96 @@ function ExportPanel({ propertyId, properties }) {
   </div>;
 }
 
+// ── INTRESSEANMÄLNINGAR ────────────────────────────────────────────────────────
+function Intresse({ propertyId }) {
+  const [list, setList] = useState([]);
+  const [form, setForm] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const d = useIsDesktop();
+
+  useEffect(() => { load(); }, [propertyId]);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await sb.from("intresse")
+      .select("*")
+      .eq("property_id", propertyId)
+      .order("created_at", { ascending: false });
+    setList(data||[]);
+    setLoading(false);
+  }
+
+  async function save() {
+    if (!form.name) return;
+    const item = { ...form, property_id: propertyId, date: form.date || new Date().toISOString().slice(0,10) };
+    if (form.id) await sb.from("intresse").update(item).eq("id", form.id);
+    else await sb.from("intresse").insert([item]);
+    setForm(null); load();
+  }
+
+  async function remove(id) {
+    if (!confirm("Ta bort anmälan?")) return;
+    await sb.from("intresse").delete().eq("id", id); load();
+  }
+
+  const blank = { name:"", phone:"", message:"", date:new Date().toISOString().slice(0,10), wish:"" };
+
+  if (loading) return <Spinner />;
+
+  return <div>
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+      <h2 style={{ fontSize:22, fontWeight:700, color:G }}>Intresseanmälningar</h2>
+      <button onClick={()=>setForm(blank)} style={btnStyle(G)}>+ Ny anmälan</button>
+    </div>
+
+    {list.length===0&&!form&&<div style={{ textAlign:"center", padding:"48px 24px", color:"#bbb", background:"#fafafa", borderRadius:12, border:"1px dashed #e8e8e8" }}>
+      <div style={{ fontSize:48, marginBottom:12, opacity:0.6 }}>📋</div>
+      <div>Inga intresseanmälningar ännu.</div>
+    </div>}
+
+    <div style={{ display:"grid", gridTemplateColumns:d?"1fr 1fr":"1fr", gap:12 }}>
+      {list.map(i=><Card key={i.id} style={{ padding:18 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+          <div>
+            <div style={{ fontWeight:700, fontSize:15, color:G }}>{i.name}</div>
+            <div style={{ fontSize:13, color:"#888", marginTop:4, display:"flex", gap:12, flexWrap:"wrap" }}>
+              {i.phone&&<a href={`tel:${i.phone}`} style={{ color:G, textDecoration:"none", fontWeight:600 }}>📞 {i.phone}</a>}
+              <span>📅 {i.date}</span>
+            </div>
+          </div>
+          <div>
+            <button onClick={()=>setForm({...i})} style={iconBtn}>✏️</button>
+            <button onClick={()=>remove(i.id)} style={iconBtn}>🗑️</button>
+          </div>
+        </div>
+        {i.message&&<div style={{ marginTop:10, padding:"8px 12px", background:"#f8f9fb", borderRadius:8, fontSize:13, color:"#555" }}>
+          💬 {i.message}
+        </div>}
+        {i.wish&&<div style={{ marginTop:8, padding:"8px 12px", background:"#f0faf4", borderRadius:8, borderLeft:"3px solid #6fcf97", fontSize:13, color:"#2d6a4f" }}>
+          ⭐ Önskemål: {i.wish}
+        </div>}
+      </Card>)}
+    </div>
+
+    {form&&<Modal title={form.id?"Redigera anmälan":"Ny intresseanmälan"} onClose={()=>setForm(null)}>
+      <label style={labelStyle}>Namn</label>
+      <input value={form.name||""} onChange={e=>setForm({...form,name:e.target.value})} style={inputStyle} placeholder="För- och efternamn" />
+      <label style={labelStyle}>Telefonnummer</label>
+      <input type="tel" value={form.phone||""} onChange={e=>setForm({...form,phone:e.target.value})} style={inputStyle} placeholder="070-000 00 00" />
+      <label style={labelStyle}>Datum för anmälan</label>
+      <input type="date" value={form.date||""} onChange={e=>setForm({...form,date:e.target.value})} style={{...inputStyle, maxWidth:"50%"}} />
+      <label style={labelStyle}>Meddelande</label>
+      <textarea value={form.message||""} onChange={e=>setForm({...form,message:e.target.value})} style={{...inputStyle, height:80, resize:"vertical"}} placeholder="Vad vill personen meddela?" />
+      <label style={labelStyle}>Särskild önskan</label>
+      <textarea value={form.wish||""} onChange={e=>setForm({...form,wish:e.target.value})} style={{...inputStyle, height:64, resize:"vertical"}} placeholder="t.ex. önskar bottenvåning, husdjur, etc." />
+      <div style={{ display:"flex", gap:10 }}>
+        <button onClick={save} style={btnStyle(G)}>Spara</button>
+        <button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button>
+      </div>
+    </Modal>}
+  </div>;
+}
+
 const SUBTABS = [
   { id:"overview", label:"Översikt", icon:"📊" },
   { id:"tenants", label:"Lägenheter", icon:"🏠" },
@@ -1781,6 +1871,7 @@ const SUBTABS = [
   { id:"rentlog", label:"Hyreshöjningar", icon:"📈" },
   { id:"proforma", label:"Proforma", icon:"💰" },
   { id:"images", label:"Bilder", icon:"🖼️" },
+  { id:"intresse", label:"Intresse", icon:"📋" },
   { id:"export", label:"Exportera", icon:"⬇️" },
 ];
 
@@ -2053,6 +2144,7 @@ export default function App() {
         {nav.type==="property"&&nav.tab==="rentlog"&&selectedProperty&&<RentLog propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="proforma"&&selectedProperty&&<Proforma propertyId={selectedProperty.id} />}
         {nav.type==="property"&&nav.tab==="images"&&selectedProperty&&<PropertyGallery propertyId={selectedProperty.id} />}
+        {nav.type==="property"&&nav.tab==="intresse"&&selectedProperty&&<Intresse propertyId={selectedProperty.id} />}
         {nav.type==="property"&&nav.tab==="export"&&selectedProperty&&<ExportPanel propertyId={selectedProperty.id} properties={properties} />}
       </div>
     </main>
