@@ -1820,32 +1820,40 @@ function Intresse({ propertyId }) {
       <div>Inga intresseanmälningar ännu.</div>
     </div>}
 
-    <div style={{ display:"grid", gridTemplateColumns:d?"1fr 1fr":"1fr", gap:12 }}>
-      {list.map(i=><Card key={i.id} style={{ padding:18 }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-          <div>
-            <div style={{ fontWeight:700, fontSize:15, color:G }}>{i.name}</div>
-            <div style={{ fontSize:13, color:"#888", marginTop:4, display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
-              <span>📅 {i.date}</span>
-              {i.phone&&<a href={`tel:${i.phone}`} style={{ color:G, textDecoration:"none", fontWeight:600 }}>📞 {i.phone}</a>}
-              {i.email&&<a href={`mailto:${i.email}`} style={{ color:"#6366f1", textDecoration:"none" }}>✉️ {i.email}</a>}
+    <div style={{ position:"relative", paddingLeft:32 }}>
+      {/* Vertical timeline line */}
+      <div style={{ position:"absolute", left:11, top:8, bottom:8, width:2, background:"#e8f5e9", borderRadius:2 }} />
+
+      {list.map((i,idx)=><div key={i.id} style={{ position:"relative", marginBottom:20 }}>
+        {/* Timeline dot */}
+        <div style={{ position:"absolute", left:-32, top:18, width:12, height:12, borderRadius:"50%", background:G, border:"2px solid #6fcf97", flexShrink:0 }} />
+
+        <Card style={{ padding:18 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontWeight:700, fontSize:15, color:G }}>{i.name}</div>
+              <div style={{ fontSize:13, color:"#888", marginTop:4, display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
+                <span style={{ fontWeight:600, color:"#aaa", fontSize:12 }}>📅 {i.date}</span>
+                {i.phone&&<a href={`tel:${i.phone}`} style={{ color:G, textDecoration:"none", fontWeight:600 }}>📞 {i.phone}</a>}
+                {i.email&&<a href={`mailto:${i.email}`} style={{ color:"#6366f1", textDecoration:"none" }}>✉️ {i.email}</a>}
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:4, flexShrink:0, marginLeft:8 }}>
+              <button onClick={()=>setForm({...i})} style={iconBtn}>✏️</button>
+              <button onClick={()=>remove(i.id)} style={iconBtn}>🗑️</button>
             </div>
           </div>
-          <div>
-            <button onClick={()=>setForm({...i})} style={iconBtn}>✏️</button>
-            <button onClick={()=>remove(i.id)} style={iconBtn}>🗑️</button>
-          </div>
-        </div>
-        {i.message&&<div style={{ marginTop:10, padding:"8px 12px", background:"#f8f9fb", borderRadius:8, fontSize:13, color:"#555" }}>
-          💬 {i.message}
-        </div>}
-        {i.wish&&<div style={{ marginTop:8, padding:"8px 12px", background:"#f0faf4", borderRadius:8, borderLeft:"3px solid #6fcf97", fontSize:13, color:"#2d6a4f" }}>
-          ⭐ Önskemål: {i.wish}
-        </div>}
-        {i.comment&&<div style={{ marginTop:8, padding:"8px 12px", background:"#fffbeb", borderRadius:8, borderLeft:"3px solid #fbbf24", fontSize:13, color:"#92400e" }}>
-          📝 {i.comment}
-        </div>}
-      </Card>)}
+          {i.message&&<div style={{ marginTop:10, padding:"8px 12px", background:"#f8f9fb", borderRadius:8, fontSize:13, color:"#555" }}>
+            💬 {i.message}
+          </div>}
+          {i.wish&&<div style={{ marginTop:8, padding:"8px 12px", background:"#f0faf4", borderRadius:8, borderLeft:"3px solid #6fcf97", fontSize:13, color:"#2d6a4f" }}>
+            ⭐ Önskemål: {i.wish}
+          </div>}
+          {i.comment&&<div style={{ marginTop:8, padding:"8px 12px", background:"#fffbeb", borderRadius:8, borderLeft:"3px solid #fbbf24", fontSize:13, color:"#92400e" }}>
+            📝 {i.comment}
+          </div>}
+        </Card>
+      </div>)}
     </div>
 
     {form&&<Modal title={form.id?"Redigera anmälan":"Ny intresseanmälan"} onClose={()=>setForm(null)}>
