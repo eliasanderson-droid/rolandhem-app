@@ -1780,8 +1780,102 @@ const SUBTABS = [
   { id:"planned", label:"Planerat underhåll", icon:"🏗️" },
   { id:"rentlog", label:"Hyreshöjningar", icon:"📈" },
   { id:"proforma", label:"Proforma", icon:"💰" },
+  { id:"images", label:"Bilder", icon:"🖼️" },
   { id:"export", label:"Exportera", icon:"⬇️" },
 ];
+
+// ── PROPERTY GALLERY ───────────────────────────────────────────────────────────
+function PropertyGallery({ propertyId }) {
+  const [images, setImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState(null); // index of fullscreen image
+  const d = useIsDesktop();
+
+  useEffect(() => { load(); }, [propertyId]);
+
+  async function load() {
+    setLoading(true);
+    const { data } = await sb.from("property_images")
+      .select("*")
+      .eq("property_id", propertyId)
+      .order("created_at");
+    setImages(data||[]);
+    setLoading(false);
+  }
+
+  async function handleUpload(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    setUploading(true);
+    for (const file of files) {
+      try {
+        const path = `${propertyId}/${Date.now()}_${file.name}`;
+        const url = await uploadFile(file, "property-images", path);
+        await sb.from("property_images").insert([{ property_id:propertyId, url, name:file.name, file_path:path }]);
+      } catch(err) { alert("Uppladdning misslyckades: " + err.message); }
+    }
+    e.target.value = "";
+    setUploading(false);
+    load();
+  }
+
+  async function remove(img) {
+    if (!confirm("Ta bort bild?")) return;
+    if (img.file_path) await sb.storage.from("property-images").remove([img.file_path]);
+    await sb.from("property_images").delete().eq("id", img.id);
+    load();
+  }
+
+  if (loading) return <Spinner />;
+
+  return <div>
+    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
+      <h2 style={{ fontSize:22,fontWeight:700,color:G }}>Bilder</h2>
+      <div>
+        <input type="file" multiple accept="image/*" onChange={handleUpload} style={{ display:"none" }} id="prop-img-upload" />
+        <label htmlFor="prop-img-upload" style={{ ...btnStyle(G), display:"inline-block", cursor:"pointer" }}>
+          {uploading?"Laddar upp…":"+ Ladda upp bilder"}
+        </label>
+      </div>
+    </div>
+
+    {images.length===0&&!uploading&&<div style={{ textAlign:"center",padding:"48px 24px",color:"#bbb",background:"#fafafa",borderRadius:12,border:"1px dashed #e8e8e8" }}>
+      <div style={{ fontSize:48,marginBottom:12,opacity:0.6 }}>🖼️</div>
+      <div>Inga bilder uppladdade ännu.</div>
+      <div style={{ fontSize:13,marginTop:8 }}>Ladda upp bilder för att visa fastigheten här.</div>
+    </div>}
+
+    <div style={{ columns: d?"3":"2", columnGap:12 }}>
+      {images.map((img,idx)=><div key={img.id} style={{ marginBottom:12, breakInside:"avoid", position:"relative" }}>
+        <img
+          src={img.url}
+          alt={img.name||""}
+          onClick={()=>setLightbox(idx)}
+          style={{ width:"100%",borderRadius:10,objectFit:"cover",cursor:"pointer",display:"block",boxShadow:"0 2px 8px rgba(0,0,0,0.1)",transition:"transform 0.15s" }}
+          onMouseEnter={e=>e.currentTarget.style.transform="scale(1.02)"}
+          onMouseLeave={e=>e.currentTarget.style.transform="none"}
+        />
+        <button
+          onClick={()=>remove(img)}
+          style={{ position:"absolute",top:8,right:8,background:"rgba(0,0,0,0.55)",border:"none",color:"#fff",borderRadius:20,width:28,height:28,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",opacity:0.8 }}
+        >✕</button>
+      </div>)}
+    </div>
+
+    {/* Lightbox */}
+    {lightbox!==null&&<div
+      onClick={()=>setLightbox(null)}
+      style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}
+    >
+      <button onClick={e=>{ e.stopPropagation(); setLightbox(l=>l>0?l-1:images.length-1); }} style={{ position:"absolute",left:20,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:"50%",width:48,height:48,fontSize:24,cursor:"pointer" }}>‹</button>
+      <img src={images[lightbox]?.url} alt="" style={{ maxWidth:"100%",maxHeight:"90vh",borderRadius:10,objectFit:"contain" }} onClick={e=>e.stopPropagation()} />
+      <button onClick={e=>{ e.stopPropagation(); setLightbox(l=>l<images.length-1?l+1:0); }} style={{ position:"absolute",right:20,top:"50%",transform:"translateY(-50%)",background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:"50%",width:48,height:48,fontSize:24,cursor:"pointer" }}>›</button>
+      <button onClick={()=>setLightbox(null)} style={{ position:"absolute",top:20,right:20,background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:"50%",width:36,height:36,fontSize:18,cursor:"pointer" }}>✕</button>
+      <div style={{ position:"absolute",bottom:20,color:"rgba(255,255,255,0.5)",fontSize:13 }}>{lightbox+1} / {images.length}</div>
+    </div>}
+  </div>;
+}
 
 // ── APP ────────────────────────────────────────────────────────────────────────
 export default function App() {
@@ -1958,6 +2052,7 @@ export default function App() {
         {nav.type==="property"&&nav.tab==="planned"&&selectedProperty&&<PlannedMaintenance propertyId={selectedProperty.id} />}
         {nav.type==="property"&&nav.tab==="rentlog"&&selectedProperty&&<RentLog propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="proforma"&&selectedProperty&&<Proforma propertyId={selectedProperty.id} />}
+        {nav.type==="property"&&nav.tab==="images"&&selectedProperty&&<PropertyGallery propertyId={selectedProperty.id} />}
         {nav.type==="property"&&nav.tab==="export"&&selectedProperty&&<ExportPanel propertyId={selectedProperty.id} properties={properties} />}
       </div>
     </main>
