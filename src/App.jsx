@@ -1842,6 +1842,9 @@ function Intresse({ propertyId }) {
         {i.wish&&<div style={{ marginTop:8, padding:"8px 12px", background:"#f0faf4", borderRadius:8, borderLeft:"3px solid #6fcf97", fontSize:13, color:"#2d6a4f" }}>
           ⭐ Önskemål: {i.wish}
         </div>}
+        {i.comment&&<div style={{ marginTop:8, padding:"8px 12px", background:"#fffbeb", borderRadius:8, borderLeft:"3px solid #fbbf24", fontSize:13, color:"#92400e" }}>
+          📝 {i.comment}
+        </div>}
       </Card>)}
     </div>
 
@@ -1858,6 +1861,8 @@ function Intresse({ propertyId }) {
       <textarea value={form.message||""} onChange={e=>setForm({...form,message:e.target.value})} style={{...inputStyle, height:80, resize:"vertical"}} placeholder="Vad vill personen meddela?" />
       <label style={labelStyle}>Särskild önskan</label>
       <textarea value={form.wish||""} onChange={e=>setForm({...form,wish:e.target.value})} style={{...inputStyle, height:64, resize:"vertical"}} placeholder="t.ex. önskar bottenvåning, husdjur, etc." />
+      <label style={labelStyle}>Kommentar / uppföljning</label>
+      <textarea value={form.comment||""} onChange={e=>setForm({...form,comment:e.target.value})} style={{...inputStyle, height:72, resize:"vertical"}} placeholder="t.ex. Ringde 2025-06-15, intresserad men flyttar höst 2026..." />
       <div style={{ display:"flex", gap:10 }}>
         <button onClick={save} style={btnStyle(G)}>Spara</button>
         <button onClick={()=>setForm(null)} style={btnStyle("#888")}>Avbryt</button>
