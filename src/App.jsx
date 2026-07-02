@@ -680,7 +680,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
       </div>
     </Card>
     <div style={{ display:"flex",gap:4,marginBottom:20,background:"#f0f0f0",borderRadius:10,padding:4 }}>
-      {tabs.map(([id,icon,label])=><button key={id} onClick={()=>setTab(id)} style={{ flex:1,padding:"8px 4px",borderRadius:8,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:tab===id?"#fff":"none",color:tab===id?G:"#888",boxShadow:tab===id?"0 1px 4px rgba(0,0,0,0.1)":"none" }}>{icon} {label}</button>)}
+      {tabs.map(([id,icon,label])=><button key={id} onClick={()=>setTab(id)} style={{ flex:1,padding:"8px 4px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:700,background:tab===id?"#fff":"none",color:tab===id?G:"#888",boxShadow:tab===id?"0 1px 4px rgba(0,0,0,0.1)":"none" }}>{icon} {label}</button>)}
     </div>
     {tab==="info"&&<div style={{ display:"flex",flexDirection:"column",gap:16 }}>
       <Card>
@@ -2104,16 +2104,13 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <div style={{ display:"flex", alignItems:"center", paddingRight:8 }}>
-                <div style={{ flex:1 }}><NavRow icon="🏢" label={p.name} active={exp} badge={pOpen} onClick={()=>goToProperty(p.id)} /></div>
-                <button onClick={e=>{ e.stopPropagation(); setEditPropertyForm({name:p.name,address:p.address}); setEditingPropertyId(p.id); }} style={{ background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,0.3)",fontSize:13,padding:"4px 6px",borderRadius:6,flexShrink:0 }}>✏️</button>
-              </div>
+              <div style={{ flex:1 }}><NavRow icon="🏢" label={p.name} active={exp} badge={pOpen} onClick={()=>goToProperty(p.id)} /></div>
             )}
             {exp&&<div style={{ marginLeft:12,marginBottom:6,borderLeft:"1px solid rgba(111,207,151,0.2)",paddingLeft:4 }}>
               {SUBTABS.map(st=>{
                 const isActive=nav.tab===st.id;
                 const stBadge=st.id==="maintenance"?allIssues.filter(i=>i.property_id===p.id&&i.status!=="åtgärdad").length:0;
-                return <button key={st.id} onClick={()=>goToTab(p.id,st.id)} style={{ display:"flex",alignItems:"center",gap:7,width:"100%",padding:"7px 10px 7px 12px",borderRadius:7,marginBottom:1,background:isActive?"rgba(111,207,151,0.18)":"transparent",border:"none",borderLeft:isActive?"2px solid #6fcf97":"2px solid transparent",color:isActive?"#6fcf97":"rgba(255,255,255,0.4)",fontSize:12,fontWeight:isActive?700:400,cursor:"pointer",textAlign:"left",transition:"background 0.1s" }}>
+                return <button key={st.id} onClick={()=>goToTab(p.id,st.id)} style={{ display:"flex",alignItems:"center",gap:7,width:"100%",padding:"7px 10px 7px 12px",borderRadius:7,marginBottom:1,background:isActive?"rgba(111,207,151,0.18)":"transparent",border:"none",borderLeft:isActive?"2px solid #6fcf97":"2px solid transparent",color:isActive?"#6fcf97":"rgba(255,255,255,0.4)",fontSize:13,fontWeight:isActive?700:400,cursor:"pointer",textAlign:"left",transition:"background 0.1s" }}>
                   <span style={{ fontSize:12,opacity:isActive?1:0.7 }}>{st.icon}</span>
                   <span style={{ flex:1 }}>{st.label}</span>
                   {stBadge>0&&<span style={{ background:"#ef4444",color:"#fff",borderRadius:10,padding:"1px 5px",fontSize:10,fontWeight:700 }}>{stBadge}</span>}
