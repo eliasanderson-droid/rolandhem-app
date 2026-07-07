@@ -166,6 +166,127 @@ function FileUpload({ files=[], onChange, bucket="issue-images", folder="misc" }
     </div>}
   </div>;
 }
+// ── BESIKTNINGSPROTOKOLL PDF ──────────────────────────────────────────────────
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function blankInspectionTemplate(tenant) {
+  return { type: "inflyttning", date: new Date().toISOString().slice(0, 10), tenant_name: tenant.name || "", condition: "", items: [], notes: "" };
+}
+
+function downloadInspectionPDF(insp, tenant, property) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageW = 210, pageH = 297;
+  const [gr, gg, gb] = hexToRgb("#1a3d2b");
+  const [lr, lg, lb] = hexToRgb("#f2f6f1");
+  const [br, bgc, bb] = hexToRgb("#d8e8d4");
+
+  // Header
+  doc.setFillColor(gr, gg, gb);
+  doc.rect(0, 0, pageW, 34, "F");
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(14, 7, 20, 20, 2, 2, "F");
+  try { doc.addImage(LOGO, "PNG", 16, 9, 16, 16); } catch (e) {}
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.text("Besiktningsprotokoll", 40, 16);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(`${property?.name || ""}${property?.address ? " · " + property.address : ""}`, 40, 23);
+  doc.text(`Lägenhet ${tenant.unit}${tenant.name ? " · " + tenant.name : ""}`, 40, 29);
+
+  let y = 46;
+
+  // Infobox-rad
+  const infoItems = [
+    ["Typ", insp.type === "utflyttning" ? "Utflyttningsbesiktning" : "Inflyttningsbesiktning"],
+    ["Datum", insp.date || "___________"],
+    ["Skick", insp.condition || "___________"],
+  ];
+  const boxW = (pageW - 28 - 8) / 3;
+  infoItems.forEach(([label, val], i) => {
+    const x = 14 + i * (boxW + 4);
+    doc.setFillColor(lr, lg, lb);
+    doc.setDrawColor(br, bgc, bb);
+    doc.roundedRect(x, y, boxW, 18, 2, 2, "FD");
+    doc.setFontSize(8);
+    doc.setTextColor(140, 140, 140);
+    doc.text(label.toUpperCase(), x + 4, y + 7);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(gr, gg, gb);
+    doc.text(String(val), x + 4, y + 14);
+  });
+
+  y += 26;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(gr, gg, gb);
+  doc.text("Rumsgenomgång", 14, y);
+  y += 6;
+
+  doc.setFont("helvetica", "normal");
+  inspRooms.forEach(room => {
+    if (y > pageH - 65) { doc.addPage(); y = 20; }
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(gr, gg, gb);
+    doc.text(room, 14, y + 5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(90, 90, 90);
+    const item = (insp.items || []).find(it => it.room === room);
+    if (item && item.note) {
+      doc.text(item.note, 55, y + 5, { maxWidth: pageW - 70 });
+    } else {
+      doc.setDrawColor(210, 210, 210);
+      doc.line(55, y + 4, pageW - 14, y + 4);
+    }
+    doc.setDrawColor(235, 235, 235);
+    doc.line(14, y + 9, pageW - 14, y + 9);
+    y += 12;
+  });
+
+  y += 4;
+  if (y > pageH - 80) { doc.addPage(); y = 20; }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(gr, gg, gb);
+  doc.text("Anteckningar", 14, y);
+  y += 4;
+  doc.setFillColor(lr, lg, lb);
+  doc.setDrawColor(br, bgc, bb);
+  doc.roundedRect(14, y, pageW - 28, 28, 2, 2, "FD");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(90, 90, 90);
+  if (insp.notes) doc.text(insp.notes, 18, y + 7, { maxWidth: pageW - 36 });
+  y += 38;
+
+  if (y > pageH - 55) { doc.addPage(); y = 20; }
+  const sigW = (pageW - 28 - 10) / 2;
+  doc.setDrawColor(180, 180, 180);
+  doc.line(14, y + 18, 14 + sigW, y + 18);
+  doc.line(14 + sigW + 10, y + 18, 14 + sigW + 10 + sigW, y + 18);
+  doc.setFontSize(9);
+  doc.setTextColor(140, 140, 140);
+  doc.text("Hyresgästens underskrift & datum", 14, y + 23);
+  doc.text("Besiktningsmannens underskrift & datum", 14 + sigW + 10, y + 23);
+
+  // Footer
+  doc.setFillColor(gr, gg, gb);
+  doc.rect(0, pageH - 16, pageW, 16, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.text("www.rolandhemfastigheter.se", 14, pageH - 7);
+  doc.text("info@rolandhemfastigheter.se", pageW - 14, pageH - 7, { align: "right" });
+
+  doc.save(`besiktning_lgh${tenant.unit}_${insp.date || "blankett"}.pdf`);
+}
+
 // ── PROSPEKT-IKONER ───────────────────────────────────────────────────────────
 const IconSize = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>;
 const IconCalendar = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
@@ -182,11 +303,15 @@ const IconGlobe = () => <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,25
 // ── PROSPEKT-GENERATOR ────────────────────────────────────────────────────────
 function ProspektModal({ tenant, property, onClose }) {
   const previewRef = useRef(null);
+  const scrollRef = useRef(null);
   const [images, setImages] = useState([]);
   const [loadingImages, setLoadingImages] = useState(true);
   const [picker, setPicker] = useState(null); // "heroImage" | "photo0" | "photo1" | "photo2" | null
   const [uploadingPicker, setUploadingPicker] = useState(false);
   const [generating, setGenerating] = useState("");
+  const [zoom, setZoom] = useState(null); // null = auto-anpassa till bredd
+  const [naturalHeight, setNaturalHeight] = useState(1050);
+  const [containerWidth, setContainerWidth] = useState(794);
 
   const city = (property?.address||"").split(",").pop().trim() || property?.address || "";
 
@@ -226,6 +351,29 @@ function ProspektModal({ tenant, property, onClose }) {
   });
 
   useEffect(() => { load(); }, [property?.id]);
+
+  // Mät tillgänglig bredd (för auto-zoom) och prospektets faktiska höjd (för korrekt scroll-yta)
+  useEffect(() => {
+    if (!scrollRef.current || !previewRef.current) return;
+    const roWidth = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect?.width;
+      if (w) setContainerWidth(w);
+    });
+    const roHeight = new ResizeObserver(entries => {
+      const h = entries[0]?.contentRect?.height;
+      if (h) setNaturalHeight(h);
+    });
+    roWidth.observe(scrollRef.current);
+    roHeight.observe(previewRef.current);
+    return () => { roWidth.disconnect(); roHeight.disconnect(); };
+  }, []);
+
+  const fitZoom = Math.min(1, Math.max(0.2, (containerWidth-24) / 794));
+  const effectiveZoom = zoom ?? fitZoom;
+  function zoomOut() { setZoom(Math.max(0.2, effectiveZoom - 0.1)); }
+  function zoomIn() { setZoom(Math.min(1.5, effectiveZoom + 0.1)); }
+  function zoomFit() { setZoom(null); }
+
   async function load() {
     setLoadingImages(true);
     const { data: imgs } = await sb.from("property_images").select("*").eq("property_id", property?.id).order("created_at");
@@ -259,7 +407,14 @@ function ProspektModal({ tenant, property, onClose }) {
   }
 
   async function renderCanvas() {
-    return html2canvas(previewRef.current, { scale:2, useCORS:true, backgroundColor:"#ffffff" });
+    const el = previewRef.current;
+    const prevTransform = el.style.transform;
+    el.style.transform = "scale(1)";
+    try {
+      return await html2canvas(el, { scale:2, useCORS:true, backgroundColor:"#ffffff" });
+    } finally {
+      el.style.transform = prevTransform;
+    }
   }
 
   async function downloadPDF() {
@@ -315,24 +470,30 @@ function ProspektModal({ tenant, property, onClose }) {
           <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}>✕</button>
         </div>
       </div>
-      <div style={{ padding:"10px 0", background:"#f4f4f4", textAlign:"center", fontSize:12, color:"#888" }}>
-        Klicka direkt på texter för att redigera. Klicka på bilder för att byta.
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 22px", background:"#f4f4f4", flexWrap:"wrap", gap:10 }}>
+        <div style={{ fontSize:12, color:"#888" }}>Klicka direkt på texter för att redigera. Klicka på bilder för att byta.</div>
+        <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+          <button onClick={zoomOut} style={{ ...iconBtn, background:"#fff", border:"1px solid #ddd", borderRadius:6, width:28, height:28 }}>−</button>
+          <span style={{ fontSize:12, color:"#888", minWidth:38, textAlign:"center" }}>{Math.round(effectiveZoom*100)}%</span>
+          <button onClick={zoomIn} style={{ ...iconBtn, background:"#fff", border:"1px solid #ddd", borderRadius:6, width:28, height:28 }}>+</button>
+          <button onClick={zoomFit} style={{ ...iconBtn, background:"#fff", border:"1px solid #ddd", borderRadius:6, padding:"4px 10px", fontSize:11 }}>Passa bredd</button>
+        </div>
       </div>
-      <div style={{ overflowX:"auto", padding:16 }}>
-        <div ref={previewRef} style={{ width:794, margin:"0 auto", fontFamily:"Inter, sans-serif", color:"#1a3d2b", background:"#fff" }}>
+      <div ref={scrollRef} style={{ overflow:"auto", maxHeight:"62vh", padding:16, background:"#eee", WebkitOverflowScrolling:"touch" }}>
+        <div style={{ width:794*effectiveZoom, height:naturalHeight*effectiveZoom, margin:"0 auto", position:"relative" }}>
+        <div ref={previewRef} style={{ width:794, position:"absolute", top:0, left:0, transform:`scale(${effectiveZoom})`, transformOrigin:"top left", fontFamily:"Inter, sans-serif", color:"#1a3d2b", background:"#fff", boxShadow:"0 2px 12px rgba(0,0,0,0.12)" }}>
           {/* HERO */}
-          <div style={{ position:"relative", height:440, overflow:"hidden" }}>
-            <div onClick={()=>setPicker("heroImage")} style={{ position:"absolute", inset:0, cursor:"pointer" }}>
-              {data.heroImage
-                ? <img src={data.heroImage} crossOrigin="anonymous" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 30%" }} />
-                : <div style={{ position:"absolute", inset:0, background:"#e8e8e8", display:"flex", alignItems:"center", justifyContent:"center", color:"#aaa" }}>Klicka för att välja bakgrundsbild</div>}
-            </div>
-            <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(255,255,255,0.97) 44%, rgba(255,255,255,0.55) 65%, rgba(255,255,255,0) 100%)" }} />
-            <div style={{ position:"relative", zIndex:2, padding:"36px 10px 0", height:"100%", display:"flex", flexDirection:"column" }}>
+          <div style={{ position:"relative", height:440, overflow:"hidden", cursor:"pointer" }} onClick={()=>setPicker("heroImage")}>
+            {data.heroImage
+              ? <img src={data.heroImage} crossOrigin="anonymous" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 30%" }} />
+              : <div style={{ position:"absolute", inset:0, background:"#e8e8e8", display:"flex", alignItems:"center", justifyContent:"center", color:"#aaa" }}>Klicka för att välja bakgrundsbild</div>}
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(255,255,255,0.97) 44%, rgba(255,255,255,0.55) 65%, rgba(255,255,255,0) 100%)", pointerEvents:"none" }} />
+            <div style={{ position:"absolute", top:14, right:14, zIndex:5, background:"rgba(0,0,0,0.55)", color:"#fff", borderRadius:6, padding:"4px 10px", fontSize:11 }}>✎ Byt bakgrundsbild</div>
+            <div style={{ position:"relative", zIndex:2, padding:"36px 10px 0", display:"flex", flexDirection:"column", pointerEvents:"none" }}>
               <div style={{ marginBottom:22 }}><img src={LOGO} alt="Rolandhem Fastigheter AB" style={{ height:80, objectFit:"contain", objectPosition:"left center" }} /></div>
-              <div {...editable("title", { fontSize:44, fontWeight:800, lineHeight:1.06, letterSpacing:"-1px", color:"#1a3d2b", marginBottom:12, whiteSpace:"pre-wrap", maxWidth:380 })}>{data.title}</div>
+              <div {...editable("title", { fontSize:44, fontWeight:800, lineHeight:1.06, letterSpacing:"-1px", color:"#1a3d2b", marginBottom:12, whiteSpace:"pre-wrap", maxWidth:380, pointerEvents:"auto" })} onClick={e=>e.stopPropagation()}>{data.title}</div>
               <div style={{ width:48, height:3, background:"#1a3d2b", borderRadius:2, marginBottom:14 }} />
-              <div {...editable("subtitle", { fontSize:14, color:"#333", lineHeight:1.6, maxWidth:270, fontWeight:400 })}>{data.subtitle}</div>
+              <div {...editable("subtitle", { fontSize:14, color:"#333", lineHeight:1.6, maxWidth:270, fontWeight:400, pointerEvents:"auto" })} onClick={e=>e.stopPropagation()}>{data.subtitle}</div>
             </div>
           </div>
           {/* STATS */}
@@ -391,6 +552,7 @@ function ProspektModal({ tenant, property, onClose }) {
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
 
@@ -422,6 +584,8 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
   const [listingModal, setListingModal] = useState(null);
   const [listingTenant, setListingTenant] = useState(null);
   const [listingLoading, setListingLoading] = useState(false);
+  const [foundForm, setFoundForm] = useState(null);
+  const [savingFound, setSavingFound] = useState(false);
 
   useEffect(() => {
     sb.from("proformas").select("property_id,data").then(({ data }) => setProformas(data||[]));
@@ -444,7 +608,25 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     setListingModal(c);
     const { data } = await sb.from("tenants").select("*").eq("id", c.tenantId).single();
     setListingTenant(data);
+    setFoundForm({
+      new_tenant_found: data?.new_tenant_found || false,
+      new_tenant_name: data?.new_tenant_name || "",
+      new_tenant_from: data?.new_tenant_from || "",
+    });
     setListingLoading(false);
+  }
+
+  async function saveFoundStatus() {
+    if (!listingTenant) return;
+    setSavingFound(true);
+    await sb.from("tenants").update({
+      new_tenant_found: foundForm.new_tenant_found,
+      new_tenant_name: foundForm.new_tenant_name || null,
+      new_tenant_from: foundForm.new_tenant_from || null,
+    }).eq("id", listingTenant.id);
+    setSavingFound(false);
+    if (onIssueAdded) onIssueAdded();
+    setListingModal(null); setListingTenant(null); setFoundForm(null);
   }
 
   function generateListingText(c, t) {
@@ -511,10 +693,10 @@ Uthyrare: [fastighetsbolag]`;
   const expiringSoon = [
     ...contracts
       .filter(c => { const x=daysUntil(c.end_date); return x!=null&&x>=0&&x<=120; })
-      .map(c => { const t=tenants.find(x=>x.id===c.tenant_id), p=properties.find(x=>x.id===t?.property_id), days=daysUntil(c.end_date); return { key:c.id, name:t?.name, prop:p?.name, unit:t?.unit, days, tenantId:t?.id, propertyId:t?.property_id, leaseEnd:c.end_date }; }),
+      .map(c => { const t=tenants.find(x=>x.id===c.tenant_id), p=properties.find(x=>x.id===t?.property_id), days=daysUntil(c.end_date); return { key:c.id, name:t?.name, prop:p?.name, unit:t?.unit, days, tenantId:t?.id, propertyId:t?.property_id, leaseEnd:c.end_date, newTenantFound:t?.new_tenant_found, newTenantFrom:t?.new_tenant_from }; }),
     ...tenants
       .filter(t => { const x=daysUntil(t.lease_end); return x!=null&&x>=0&&x<=120&&!contracts.some(c=>c.tenant_id===t.id&&c.end_date===t.lease_end); })
-      .map(t => { const p=properties.find(x=>x.id===t.property_id), days=daysUntil(t.lease_end); return { key:"t-"+t.id, name:t.name, prop:p?.name, unit:t.unit, days, tenantId:t.id, propertyId:t.property_id, leaseEnd:t.lease_end }; })
+      .map(t => { const p=properties.find(x=>x.id===t.property_id), days=daysUntil(t.lease_end); return { key:"t-"+t.id, name:t.name, prop:p?.name, unit:t.unit, days, tenantId:t.id, propertyId:t.property_id, leaseEnd:t.lease_end, newTenantFound:t.new_tenant_found, newTenantFrom:t.new_tenant_from }; })
   ].sort((a,b)=>a.days-b.days);
   const recent = [...issues].sort((a,b)=>(b.reported||"").localeCompare(a.reported||"")).slice(0,4);
 
@@ -573,6 +755,7 @@ Uthyrare: [fastighetsbolag]`;
           return <div key={c.key} onClick={()=>openListingModal(c)} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f5f5f5", cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background="#fafafa"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
             <div><div style={{ fontWeight:600 }}>{c.name}</div><div style={{ fontSize:12, color:"#888" }}>{c.prop} · Lgh {c.unit}</div></div>
             <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+              {c.newTenantFound&&<Badge label={c.newTenantFrom?`✅ Hittad, från ${c.newTenantFrom}`:"✅ Hyresgäst hittad"} color="#16a34a" />}
               <Badge label={`${c.days} dagar`} color={c.days<30?"#dc2626":"#d97706"} />
               <span style={{ color:"#d1d5db", fontSize:14 }}>›</span>
             </div>
@@ -626,17 +809,35 @@ Uthyrare: [fastighetsbolag]`;
     </Modal>}
 
     {/* Listing text generator modal */}
-    {listingModal&&<Modal title="📢 Annonstext" onClose={()=>{ setListingModal(null); setListingTenant(null); }}>
-      {listingLoading?<Spinner />:<>
-        <div style={{ fontSize:13,color:"#888",marginBottom:12 }}>Lgh {listingModal.unit} · {listingModal.prop} · Ledig om {listingModal.days} dagar</div>
+    {listingModal&&<Modal title="📢 Kontrakt löper ut" onClose={()=>{ setListingModal(null); setListingTenant(null); setFoundForm(null); }}>
+      {listingLoading||!foundForm?<Spinner />:<>
+        <div style={{ fontSize:13,color:"#888",marginBottom:16 }}>Lgh {listingModal.unit} · {listingModal.prop} · Ledig om {listingModal.days} dagar</div>
+
+        <Card style={{ background:"#f0faf4", border:"1px solid #c8e6c9", marginBottom:20, padding:16 }}>
+          <label style={{ display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:14,fontWeight:700,color:G,marginBottom:foundForm.new_tenant_found?12:0 }}>
+            <input type="checkbox" checked={!!foundForm.new_tenant_found} onChange={e=>setFoundForm({...foundForm,new_tenant_found:e.target.checked})} style={{ width:18,height:18 }} />
+            ✅ Ny hyresgäst är hittad
+          </label>
+          {foundForm.new_tenant_found&&<>
+            <label style={labelStyle}>Namn (valfritt)</label>
+            <input value={foundForm.new_tenant_name||""} onChange={e=>setFoundForm({...foundForm,new_tenant_name:e.target.value})} style={inputStyle} placeholder="Namn på ny hyresgäst" />
+            <label style={labelStyle}>Inflyttning från</label>
+            <input type="date" value={foundForm.new_tenant_from||""} onChange={e=>setFoundForm({...foundForm,new_tenant_from:e.target.value})} style={{...inputStyle,marginBottom:0}} />
+          </>}
+        </Card>
+        <div style={{ display:"flex",gap:10,marginBottom:24 }}>
+          <button onClick={saveFoundStatus} disabled={savingFound} style={btnStyle(G)}>{savingFound?"Sparar…":"💾 Spara status"}</button>
+        </div>
+
+        <div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:10 }}>📢 Annonstext</div>
         <textarea
           readOnly
           value={generateListingText(listingModal, listingTenant)}
-          style={{ width:"100%",height:320,padding:"14px",borderRadius:10,border:"1px solid #e0e0e0",fontSize:14,lineHeight:1.6,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box",background:"#fafafa",color:"#333" }}
+          style={{ width:"100%",height:280,padding:"14px",borderRadius:10,border:"1px solid #e0e0e0",fontSize:14,lineHeight:1.6,fontFamily:"inherit",resize:"vertical",boxSizing:"border-box",background:"#fafafa",color:"#333" }}
         />
         <div style={{ display:"flex",gap:10,marginTop:14 }}>
           <button onClick={()=>{ navigator.clipboard.writeText(generateListingText(listingModal,listingTenant)); }} style={btnStyle(G)}>📋 Kopiera text</button>
-          <button onClick={()=>{ setListingModal(null); setListingTenant(null); }} style={btnStyle("#888")}>Stäng</button>
+          <button onClick={()=>{ setListingModal(null); setListingTenant(null); setFoundForm(null); }} style={btnStyle("#888")}>Stäng</button>
         </div>
         <div style={{ marginTop:12,fontSize:12,color:"#aaa" }}>💡 Kom ihåg att fylla i kontaktuppgifter och fastighetsbolag innan publicering.</div>
       </>}
@@ -794,7 +995,7 @@ function Documents({ tenant }) {
 }
 
 // ── INSPECTIONS ────────────────────────────────────────────────────────────────
-function Inspections({ tenant }) {
+function Inspections({ tenant, property }) {
   const [inspections, setInspections] = useState([]);
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -818,9 +1019,12 @@ function Inspections({ tenant }) {
 
   if (loading) return <Spinner />;
   return <div>
-    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8 }}>
       <div style={{ fontWeight:700,color:G }}>{inspections.length} besiktningar</div>
-      <button onClick={()=>setForm(blank)} style={btnStyle(G)}>+ Ny besiktning</button>
+      <div style={{ display:"flex",gap:8 }}>
+        <button onClick={()=>downloadInspectionPDF(blankInspectionTemplate(tenant), tenant, property)} style={{...btnStyle("#6366f1"),fontSize:13}}>📄 Tom blankett (PDF)</button>
+        <button onClick={()=>setForm(blank)} style={btnStyle(G)}>+ Ny besiktning</button>
+      </div>
     </div>
     {inspections.length===0&&!form&&<Card style={{ textAlign:"center",padding:40,color:"#bbb" }}><div style={{ fontSize:36,marginBottom:8 }}>🔍</div><div>Inga besiktningar.</div></Card>}
     {inspections.map(ins=>{
@@ -832,7 +1036,7 @@ function Inspections({ tenant }) {
             <span style={{ fontWeight:700,color:G,textTransform:"capitalize" }}>{ins.type}sbesiktning</span>
             <Badge label={ins.condition} color={conditionColors[ins.condition]||"#888"} />
           </div>
-          <div><button onClick={()=>setForm({...ins,items:ins.items||[],files:ins.files||[]})} style={iconBtn}>✏️</button><button onClick={()=>remove(ins.id)} style={iconBtn}>🗑️</button></div>
+          <div><button onClick={()=>downloadInspectionPDF(ins, tenant, property)} title="Ladda ner PDF" style={iconBtn}>⬇️</button><button onClick={()=>setForm({...ins,items:ins.items||[],files:ins.files||[]})} style={iconBtn}>✏️</button><button onClick={()=>remove(ins.id)} style={iconBtn}>🗑️</button></div>
         </div>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10 }}>
           {[["Datum",ins.date],["Hyresgäst",ins.tenant_name||"–"],["Skick",ins.condition]].map(([l,v])=><div key={l}><div style={{ fontSize:11,color:"#aaa",fontWeight:600,textTransform:"uppercase" }}>{l}</div><div style={{ fontSize:13,fontWeight:600,color:G,marginTop:2 }}>{v}</div></div>)}
@@ -959,7 +1163,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
     </div>}
     {tab==="docs"&&<Documents tenant={tenant} />}
     {tab==="issues"&&<TenantIssues tenant={tenant} />}
-    {tab==="inspections"&&<Inspections tenant={tenant} />}
+    {tab==="inspections"&&<Inspections tenant={tenant} property={prop} />}
     {editForm&&<Modal title="Redigera lägenhet" onClose={()=>setEditForm(null)}>
       <div style={{ fontSize:12,fontWeight:700,color:G,textTransform:"uppercase",marginBottom:10 }}>Lägenhet</div>
       <div style={{ display:"flex",gap:12 }}>
