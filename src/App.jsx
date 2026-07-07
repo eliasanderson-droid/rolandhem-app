@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import html2canvas from "https://esm.sh/html2canvas@1.4.1";
+import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
 const SUPABASE_URL = "https://ogpobhsigluydledhvlv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_HA5no7Rd01OwiN15f5iioA_wo2rRgam";
@@ -164,6 +166,251 @@ function FileUpload({ files=[], onChange, bucket="issue-images", folder="misc" }
     </div>}
   </div>;
 }
+// ── PROSPEKT-IKONER ───────────────────────────────────────────────────────────
+const IconSize = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>;
+const IconCalendar = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+const IconCoin = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3"/></svg>;
+const IconCar = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3.5l2-3h7l2 3H21a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7.5" cy="17" r="2.5"/><circle cx="16.5" cy="17" r="2.5"/></svg>;
+const IconWaves = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><path d="M2 12c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/><path d="M2 17c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/></svg>;
+const IconBalcony = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><rect x="3" y="10" width="18" height="4"/><line x1="6" y1="14" x2="6" y2="20"/><line x1="12" y1="14" x2="12" y2="20"/><line x1="18" y1="14" x2="18" y2="20"/><line x1="3" y1="20" x2="21" y2="20"/><path d="M8 10V6a4 4 0 0 1 8 0v4"/></svg>;
+const IconPlant = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><path d="M12 22V12"/><path d="M12 12C12 7 7 4 3 6c4 1 7 4 9 6"/><path d="M12 12c0-5 5-8 9-6-4 1-7 4-9 6"/></svg>;
+const IconPeople = () => <svg viewBox="0 0 24 24" fill="none" stroke="#2d6a4f" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="20" height="20"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="3"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>;
+const IconPin = () => <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><path d="M12 22s-8-6.5-8-12a8 8 0 0 1 16 0c0 5.5-8 12-8 12z"/><circle cx="12" cy="10" r="3"/></svg>;
+const IconPhone = () => <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.8 19.8 0 0 1 3.08 4.18 2 2 0 0 1 5.07 2h3a2 2 0 0 1 2 1.72c.13 1 .36 1.97.72 2.9a2 2 0 0 1-.45 2.11L9.09 9.91a16 16 0 0 0 6 6l1.18-1.18a2 2 0 0 1 2.11-.45c.93.36 1.9.59 2.9.72A2 2 0 0 1 22 16.92z"/></svg>;
+const IconGlobe = () => <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="22" height="22"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>;
+
+// ── PROSPEKT-GENERATOR ────────────────────────────────────────────────────────
+function ProspektModal({ tenant, property, onClose }) {
+  const previewRef = useRef(null);
+  const [images, setImages] = useState([]);
+  const [loadingImages, setLoadingImages] = useState(true);
+  const [picker, setPicker] = useState(null); // "heroImage" | "photo0" | "photo1" | "photo2" | null
+  const [uploadingPicker, setUploadingPicker] = useState(false);
+  const [generating, setGenerating] = useState("");
+
+  const city = (property?.address||"").split(",").pop().trim() || property?.address || "";
+
+  const [data, setData] = useState(() => {
+    const parkingFacts = tenant.parking
+      ? { stat4Label:"Parkering", stat4Sub: tenant.parking_cost ? `${fmt(tenant.parking_cost)}/mån` : "Ingår i hyran" }
+      : { stat4Label:"Kontakt", stat4Sub:"Boka visning idag" };
+    return {
+      title: "Trivsam\nlägenhet",
+      subtitle: `Lägenhet ${tenant.unit} om ${tenant.sqm||"–"} m² på ${property?.address||property?.name||""}${city?`, ${city}`:""}`,
+      stat1Title: tenant.sqm ? `${tenant.sqm} m²` : "–",
+      stat1Sub: tenant.floor!=null ? `${tenant.floor} tr` : "Bottenvåning",
+      stat2Title: "Ledig från",
+      stat2Sub: tenant.move_in || "Omgående",
+      stat3Title: "Kallhyra",
+      stat3Sub: `${fmt(tenant.rent)}/mån`,
+      ...parkingFacts,
+      feat1Title: "Bra läge",
+      feat1Desc: `Ett lugnt och trivsamt område med närhet till både natur och centrum${city?` i ${city}`:""}.`,
+      feat2Title: tenant.balcony ? "Balkong" : "Ljust och fint",
+      feat2Desc: tenant.balcony ? "Njut av solen på egen balkong." : "Ljusa och fina rum med gott om plats.",
+      feat3Title: "Nära naturen",
+      feat3Desc: "Grönområden och promenadstråk finns runt hörnet.",
+      feat4Title: "Trivsam gemenskap",
+      feat4Desc: "Ett omtyckt boende med god gemenskap bland grannarna.",
+      footerName: property?.name || "",
+      footerCity: city,
+      contactLabel: "För mer information",
+      contactSub: "Kontakta oss idag!",
+      website: "www.rolandhemfastigheter.se",
+      email: "info@rolandhemfastigheter.se",
+      heroImage: null,
+      photo0: null,
+      photo1: null,
+      photo2: null,
+    };
+  });
+
+  useEffect(() => { load(); }, [property?.id]);
+  async function load() {
+    setLoadingImages(true);
+    const { data: imgs } = await sb.from("property_images").select("*").eq("property_id", property?.id).order("created_at");
+    setImages(imgs||[]);
+    setData(prev => ({
+      ...prev,
+      heroImage: prev.heroImage || imgs?.[0]?.url || null,
+      photo0: prev.photo0 || imgs?.[1]?.url || null,
+      photo1: prev.photo1 || imgs?.[2]?.url || null,
+      photo2: prev.photo2 || imgs?.[3]?.url || null,
+    }));
+    setLoadingImages(false);
+  }
+
+  function set(k, v) { setData(prev => ({...prev, [k]:v})); }
+  function choosePicture(slot, url) { set(slot, url); setPicker(null); }
+
+  async function handlePickerUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingPicker(true);
+    try {
+      const path = `${property.id}/${Date.now()}_${file.name}`;
+      const url = await uploadFile(file, "property-images", path);
+      await sb.from("property_images").insert([{ property_id:property.id, url, name:file.name, file_path:path }]);
+      choosePicture(picker, url);
+      load();
+    } catch(err) { alert("Uppladdning misslyckades: " + err.message); }
+    setUploadingPicker(false);
+    e.target.value = "";
+  }
+
+  async function renderCanvas() {
+    return html2canvas(previewRef.current, { scale:2, useCORS:true, backgroundColor:"#ffffff" });
+  }
+
+  async function downloadPDF() {
+    setGenerating("pdf");
+    try {
+      const canvas = await renderCanvas();
+      const img = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = (canvas.height * pageW) / canvas.width;
+      pdf.addImage(img, "JPEG", 0, 0, pageW, pageH);
+      pdf.save(`prospekt_lgh${tenant.unit}.pdf`);
+    } catch(err) { alert("Kunde inte generera PDF: " + err.message); }
+    setGenerating("");
+  }
+
+  async function downloadJPEG() {
+    setGenerating("jpeg");
+    try {
+      const canvas = await renderCanvas();
+      const link = document.createElement("a");
+      link.download = `prospekt_lgh${tenant.unit}.jpg`;
+      link.href = canvas.toDataURL("image/jpeg", 0.95);
+      link.click();
+    } catch(err) { alert("Kunde inte generera bild: " + err.message); }
+    setGenerating("");
+  }
+
+  const editable = (key, style) => ({
+    contentEditable:true,
+    suppressContentEditableWarning:true,
+    onBlur:e=>set(key, e.currentTarget.innerText),
+    style:{ outline:"none", cursor:"text", ...style },
+  });
+
+  function PhotoSlot({ slotKey, style }) {
+    return <div style={{ position:"relative", width:"100%", height:155, borderRadius:6, overflow:"hidden", background:"#e8e8e8", cursor:"pointer", ...style }}
+      onClick={()=>setPicker(slotKey)}>
+      {data[slotKey]
+        ? <img src={data[slotKey]} crossOrigin="anonymous" alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+        : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#aaa", fontSize:12, textAlign:"center", padding:8 }}>Klicka för att välja bild</div>}
+      <div style={{ position:"absolute", bottom:4, right:4, background:"rgba(0,0,0,0.55)", color:"#fff", borderRadius:6, padding:"2px 8px", fontSize:10 }}>✎ Byt bild</div>
+    </div>;
+  }
+
+  return <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:200, display:"flex", flexDirection:"column", alignItems:"center", padding:"16px 8px", overflowY:"auto" }} onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+    <div style={{ background:"#fff", borderRadius:16, width:"100%", maxWidth:860, boxShadow:"0 20px 60px rgba(0,0,0,0.3)", overflow:"hidden" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"16px 22px", borderBottom:"1px solid #eee", flexWrap:"wrap", gap:10 }}>
+        <h3 style={{ fontSize:17, fontWeight:700, color:G }}>📄 Prospekt – Lägenhet {tenant.unit}</h3>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+          <button onClick={downloadJPEG} disabled={!!generating} style={btnStyle("#888")}>{generating==="jpeg"?"Genererar…":"⬇️ JPEG"}</button>
+          <button onClick={downloadPDF} disabled={!!generating} style={btnStyle(G)}>{generating==="pdf"?"Genererar…":"⬇️ PDF"}</button>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}>✕</button>
+        </div>
+      </div>
+      <div style={{ padding:"10px 0", background:"#f4f4f4", textAlign:"center", fontSize:12, color:"#888" }}>
+        Klicka direkt på texter för att redigera. Klicka på bilder för att byta.
+      </div>
+      <div style={{ overflowX:"auto", padding:16 }}>
+        <div ref={previewRef} style={{ width:794, margin:"0 auto", fontFamily:"Inter, sans-serif", color:"#1a3d2b", background:"#fff" }}>
+          {/* HERO */}
+          <div style={{ position:"relative", height:440, overflow:"hidden" }}>
+            <div onClick={()=>setPicker("heroImage")} style={{ position:"absolute", inset:0, cursor:"pointer" }}>
+              {data.heroImage
+                ? <img src={data.heroImage} crossOrigin="anonymous" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 30%" }} />
+                : <div style={{ position:"absolute", inset:0, background:"#e8e8e8", display:"flex", alignItems:"center", justifyContent:"center", color:"#aaa" }}>Klicka för att välja bakgrundsbild</div>}
+            </div>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(255,255,255,0.97) 44%, rgba(255,255,255,0.55) 65%, rgba(255,255,255,0) 100%)" }} />
+            <div style={{ position:"relative", zIndex:2, padding:"36px 10px 0", height:"100%", display:"flex", flexDirection:"column" }}>
+              <div style={{ marginBottom:22 }}><img src={LOGO} alt="Rolandhem Fastigheter AB" style={{ height:80, objectFit:"contain", objectPosition:"left center" }} /></div>
+              <div {...editable("title", { fontSize:44, fontWeight:800, lineHeight:1.06, letterSpacing:"-1px", color:"#1a3d2b", marginBottom:12, whiteSpace:"pre-wrap", maxWidth:380 })}>{data.title}</div>
+              <div style={{ width:48, height:3, background:"#1a3d2b", borderRadius:2, marginBottom:14 }} />
+              <div {...editable("subtitle", { fontSize:14, color:"#333", lineHeight:1.6, maxWidth:270, fontWeight:400 })}>{data.subtitle}</div>
+            </div>
+          </div>
+          {/* STATS */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1.35fr", background:"#f2f6f1", border:"1px solid #d8e8d4", borderRadius:12, margin:"18px 24px", overflow:"hidden" }}>
+            <div style={{ padding:"16px 18px", display:"flex", alignItems:"flex-start", gap:12, borderRight:"1px solid #d8e8d4" }}>
+              <div style={{ flexShrink:0, marginTop:1 }}><IconSize/></div>
+              <div><div {...editable("stat1Title", { fontSize:13.2, fontWeight:700, marginBottom:2, lineHeight:1.2 })}>{data.stat1Title}</div><div {...editable("stat1Sub", { fontSize:12.1, color:"#666", lineHeight:1.45 })}>{data.stat1Sub}</div></div>
+            </div>
+            <div style={{ padding:"16px 18px", display:"flex", alignItems:"flex-start", gap:12, borderRight:"1px solid #d8e8d4" }}>
+              <div style={{ flexShrink:0, marginTop:1 }}><IconCalendar/></div>
+              <div><div {...editable("stat2Title", { fontSize:13.2, fontWeight:700, marginBottom:2, lineHeight:1.2 })}>{data.stat2Title}</div><div {...editable("stat2Sub", { fontSize:12.1, color:"#666", lineHeight:1.45 })}>{data.stat2Sub}</div></div>
+            </div>
+            <div style={{ padding:"16px 18px", display:"flex", alignItems:"flex-start", gap:12, borderRight:"1px solid #d8e8d4" }}>
+              <div style={{ flexShrink:0, marginTop:1 }}><IconCoin/></div>
+              <div><div {...editable("stat3Title", { fontSize:13.2, fontWeight:700, marginBottom:2, lineHeight:1.2 })}>{data.stat3Title}</div><div {...editable("stat3Sub", { fontSize:12.1, color:"#666", lineHeight:1.45 })}>{data.stat3Sub}</div></div>
+            </div>
+            <div style={{ padding:"16px 18px", display:"flex", alignItems:"flex-start", gap:12 }}>
+              <div style={{ flexShrink:0, marginTop:1 }}><IconCar/></div>
+              <div><div {...editable("stat4Label", { fontSize:13.2, fontWeight:700, marginBottom:2, lineHeight:1.2 })}>{data.stat4Label}</div><div {...editable("stat4Sub", { fontSize:11, color:"#666", lineHeight:1.45 })}>{data.stat4Sub}</div></div>
+            </div>
+          </div>
+          {/* BODY */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr" }}>
+            <div style={{ padding:"28px 36px 28px 28px" }}>
+              {[["feat1Title","feat1Desc",<IconWaves key="w"/>],["feat2Title","feat2Desc",<IconBalcony key="b"/>],["feat3Title","feat3Desc",<IconPlant key="p"/>],["feat4Title","feat4Desc",<IconPeople key="pe"/>]].map(([tk,dk,icon],i)=>
+                <div key={i} style={{ display:"flex", gap:14, marginBottom:20, alignItems:"flex-start" }}>
+                  <div style={{ width:40, height:40, borderRadius:"50%", background:"#e4f0e0", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{icon}</div>
+                  <div>
+                    <div {...editable(tk, { fontSize:13, fontWeight:700, marginBottom:3 })}>{data[tk]}</div>
+                    <div {...editable(dk, { fontSize:11.5, color:"#555", lineHeight:1.5 })}>{data[dk]}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div style={{ display:"grid", gridTemplateRows:"1fr 1fr", gap:4, padding:"4px 16px 4px 0" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4 }}>
+                <PhotoSlot slotKey="photo0" />
+                <PhotoSlot slotKey="photo1" />
+              </div>
+              <PhotoSlot slotKey="photo2" />
+            </div>
+          </div>
+          {/* FOOTER */}
+          <div style={{ background:"#1a3d2b", color:"#fff", padding:"20px 28px", display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, alignItems:"center", marginTop:4 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <IconPin/>
+              <div><div {...editable("footerName", { fontSize:12, fontWeight:700, color:"#fff" })}>{data.footerName}</div><div {...editable("footerCity", { fontSize:10.5, color:"rgba(255,255,255,0.55)", marginTop:1 })}>{data.footerCity}</div></div>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <IconPhone/>
+              <div><div {...editable("contactLabel", { fontSize:12, fontWeight:700, color:"#fff" })}>{data.contactLabel}</div><div {...editable("contactSub", { fontSize:10.5, color:"rgba(255,255,255,0.55)", marginTop:1 })}>{data.contactSub}</div></div>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <IconGlobe/>
+              <div><div {...editable("website", { fontSize:12, fontWeight:700, color:"#fff" })}>{data.website}</div><div {...editable("email", { fontSize:10.5, color:"rgba(255,255,255,0.55)", marginTop:1 })}>{data.email}</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {picker && <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }} onClick={()=>setPicker(null)}>
+      <div style={{ background:"#fff", borderRadius:14, padding:20, width:"100%", maxWidth:480, maxHeight:"80vh", overflowY:"auto" }} onClick={e=>e.stopPropagation()}>
+        <h4 style={{ fontSize:15, fontWeight:700, color:G, marginBottom:14 }}>Välj bild</h4>
+        {loadingImages ? <Spinner/> : <>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:14 }}>
+            {images.map(img=><img key={img.id} src={img.url} alt="" onClick={()=>choosePicture(picker, img.url)} style={{ width:"100%", height:80, objectFit:"cover", borderRadius:8, cursor:"pointer", border:"2px solid transparent" }} onMouseEnter={e=>e.currentTarget.style.border=`2px solid ${G}`} onMouseLeave={e=>e.currentTarget.style.border="2px solid transparent"} />)}
+            {images.length===0 && <div style={{ gridColumn:"1/-1", color:"#aaa", fontSize:13, textAlign:"center", padding:20 }}>Inga bilder i fastighetsgalleriet ännu.</div>}
+          </div>
+          <input type="file" accept="image/*" onChange={handlePickerUpload} style={{ display:"none" }} id="prospekt-img-upload" />
+          <label htmlFor="prospekt-img-upload" style={{ ...btnStyle(G), display:"inline-block", cursor:"pointer" }}>{uploadingPicker?"Laddar upp…":"+ Ladda upp ny bild"}</label>
+        </>}
+        <div style={{ marginTop:14 }}><button onClick={()=>setPicker(null)} style={btnStyle("#888")}>Avbryt</button></div>
+      </div>
+    </div>}
+  </div>;
+}
+
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function Dashboard({ tenants, contracts, issues, properties, selectedProperty, onIssueAdded }) {
   const d = useIsDesktop();
@@ -636,6 +883,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
   const [tab, setTab] = useState("info");
   const [editForm, setEditForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showProspekt, setShowProspekt] = useState(false);
   const prop = properties.find(p=>p.id===tenant.property_id);
 
   async function saveTenant() {
@@ -663,7 +911,10 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
         </div>
         <div style={{ marginTop:6,fontSize:13,color:"#888" }}>{prop?.name} · {prop?.address}</div>
       </div>
-      <button onClick={()=>setEditForm({...tenant})} style={btnStyle(G)}>✏️ Redigera</button>
+      <div style={{ display:"flex", gap:8 }}>
+        <button onClick={()=>setShowProspekt(true)} style={btnStyle("#2d6a4f")}>📄 Prospekt</button>
+        <button onClick={()=>setEditForm({...tenant})} style={btnStyle(G)}>✏️ Redigera</button>
+      </div>
     </div>
     <Card style={{ marginBottom:20,background:`linear-gradient(135deg,${G} 0%,#2d2d5e 100%)`,border:"none" }}>
       <div style={{ display:"flex",gap:20,flexWrap:"wrap",alignItems:"center" }}>
@@ -743,6 +994,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
       <label style={labelStyle}>Anteckningar</label><textarea value={editForm.notes||""} onChange={e=>setEditForm({...editForm,notes:e.target.value})} style={{...inputStyle,height:72,resize:"vertical"}} />
       <div style={{ display:"flex",gap:10,marginTop:8 }}><button onClick={saveTenant} disabled={saving} style={btnStyle(G)}>{saving?"Sparar…":"Spara"}</button><button onClick={()=>setEditForm(null)} style={btnStyle("#888")}>Avbryt</button></div>
     </Modal>}
+    {showProspekt&&<ProspektModal tenant={tenant} property={prop} onClose={()=>setShowProspekt(false)} />}
   </div>;
 }
 
