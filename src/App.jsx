@@ -490,7 +490,13 @@ function ProspektModal({ tenant, property, onClose }) {
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(255,255,255,0.97) 44%, rgba(255,255,255,0.55) 65%, rgba(255,255,255,0) 100%)", pointerEvents:"none" }} />
             <div style={{ position:"absolute", top:14, right:14, zIndex:5, background:"rgba(0,0,0,0.55)", color:"#fff", borderRadius:6, padding:"4px 10px", fontSize:11 }}>✎ Byt bakgrundsbild</div>
             <div style={{ position:"relative", zIndex:2, padding:"36px 10px 0", display:"flex", flexDirection:"column", pointerEvents:"none" }}>
-              <div style={{ marginBottom:22 }}><img src={LOGO} alt="Rolandhem Fastigheter AB" style={{ height:80, objectFit:"contain", objectPosition:"left center" }} /></div>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:22 }}>
+                <img src={LOGO} alt="" style={{ height:52, width:52, objectFit:"contain", flexShrink:0 }} />
+                <div style={{ lineHeight:1.15 }}>
+                  <div style={{ fontSize:19, fontWeight:800, color:"#1a3d2b", letterSpacing:"-0.3px" }}>Rolandhem</div>
+                  <div style={{ fontSize:12.5, fontWeight:600, color:"#2d6a4f", letterSpacing:"0.04em", textTransform:"uppercase" }}>Fastigheter AB</div>
+                </div>
+              </div>
               <div {...editable("title", { fontSize:44, fontWeight:800, lineHeight:1.06, letterSpacing:"-1px", color:"#1a3d2b", marginBottom:12, whiteSpace:"pre-wrap", maxWidth:380, pointerEvents:"auto" })} onClick={e=>e.stopPropagation()}>{data.title}</div>
               <div style={{ width:48, height:3, background:"#1a3d2b", borderRadius:2, marginBottom:14 }} />
               <div {...editable("subtitle", { fontSize:14, color:"#333", lineHeight:1.6, maxWidth:270, fontWeight:400, pointerEvents:"auto" })} onClick={e=>e.stopPropagation()}>{data.subtitle}</div>
