@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import html2canvas from "https://esm.sh/html2canvas@1.4.1";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 import {
-  X, FileText, Pencil, Wrench, Clipboard, Download, Trash2, Search, Save, Leaf, Paperclip,
+  X, FileText, Pencil, Wrench, Clipboard, Download, Upload, Trash2, Search, Save, Leaf, Paperclip, ArrowLeft,
   Check, Home, HardHat, FileEdit, Car, TrendingUp, CheckCircle2, Contact, Megaphone, Lightbulb,
   FolderOpen, Key, DoorOpen, User, Calendar, Phone, Mail, MessageSquare, Wallet, Image, EyeOff,
   Eye, Zap, Sparkles, Lock, ArrowUpDown, Wind, Shield, Scale, Link, Star, LayoutDashboard,
@@ -662,6 +662,7 @@ function DSResponsiveStyles() {
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const G = "#1a3d2b";
+const R = 14; // EN radie för alla stora ytor (kort, modaler, paneler) — ersätter tidigare 16/12/10/8 blandat
 const btnStyle = bg => ({ background:bg, color:"#fff", border:"none", borderRadius:8, padding:"9px 18px", cursor:"pointer", fontWeight:600, fontSize:14 });
 const iconBtn = { background:"none", border:"none", cursor:"pointer", fontSize:16, padding:"2px 4px" };
 const inputStyle = { width:"100%", padding:"9px 12px", borderRadius:8, border:"1px solid #e0e0e0", fontSize:16, marginBottom:12, boxSizing:"border-box", display:"block" };
@@ -687,7 +688,7 @@ function Badge({ label, color="#888" }) {
   return <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:6, padding:"2px 10px", fontSize:12, fontWeight:600 }}>{label}</span>;
 }
 function Card({ children, style, hoverable }) {
-  return <div className={hoverable?"rh-hover-lift":""} style={{ background:"#fff", borderRadius:16, border:"1px solid #efefef", padding:24, boxShadow:"0 1px 3px rgba(0,0,0,0.04)", ...style }}>{children}</div>;
+  return <div className={hoverable?"rh-hover-lift":""} style={{ background:"#fff", borderRadius:R, border:"1px solid #efefef", padding:24, boxShadow:"0 1px 3px rgba(0,0,0,0.04)", ...style }}>{children}</div>;
 }
 function StatCard({ label, value, sub, color=G }) {
   return <Card hoverable style={{ flex:1, minWidth:130, padding:"16px 20px" }}>
@@ -698,7 +699,7 @@ function StatCard({ label, value, sub, color=G }) {
 }
 function Modal({ title, children, onClose }) {
   return <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:20 }}>
-    <div style={{ background:"#fff", borderRadius:16, padding:28, width:"100%", maxWidth:500, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}>
+    <div style={{ background:"#fff", borderRadius:R, padding:28, width:"100%", maxWidth:500, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
         <h3 style={{ fontSize:18, fontWeight:700, color:G }}>{title}</h3>
         <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}><X size={14} style={{verticalAlign:"-2px"}}/></button>
@@ -795,9 +796,9 @@ function ToastContainer() {
 }
 
 // ── EMPTY STATE (ikon + text + CTA, ersätter ad hoc "Inga X ännu") ────────────
-function EmptyState({ icon="🔍", title, description, actionLabel, onAction }) {
+function EmptyState({ icon=<Search size={40}/>, title, description, actionLabel, onAction }) {
   return <Card style={{ textAlign:"center", padding:"44px 24px", color:"#bbb", background:"#fafafa", border:"1px dashed #e8e8e8", boxShadow:"none" }}>
-    <div style={{ fontSize:40, marginBottom:12, opacity:0.7 }}>{icon}</div>
+    <div style={{ display:"flex", justifyContent:"center", marginBottom:12, color:"#bbb" }}>{icon}</div>
     {title && <div style={{ fontWeight:700, color:"#888", fontSize:15, marginBottom:4 }}>{title}</div>}
     {description && <div style={{ fontSize:13, color:"#aaa", marginBottom:actionLabel?16:0 }}>{description}</div>}
     {actionLabel && <button className="rh-btn-press" onClick={onAction} style={btnStyle(G)}>{actionLabel}</button>}
@@ -805,7 +806,7 @@ function EmptyState({ icon="🔍", title, description, actionLabel, onAction }) 
 }
 
 // ── SWIPEABLE ROW (svep åt vänster för att markera åtgärdad) ──────────────────
-function SwipeableRow({ children, onComplete, actionLabel="✓ Markera åtgärdad", actionColor="#16a34a" }) {
+function SwipeableRow({ children, onComplete, actionLabel=<><Check size={14} style={{verticalAlign:"-2px"}}/> Markera åtgärdad</>, actionColor="#16a34a" }) {
   const ref = useRef(null);
   const dragState = useRef({ startX:0, dx:0, dragging:false });
 
@@ -827,7 +828,7 @@ function SwipeableRow({ children, onComplete, actionLabel="✓ Markera åtgärda
       ref.current.style.transform = "translateX(0)";
     }
   }
-  return <div style={{ position:"relative", borderRadius:12, overflow:"hidden" }}>
+  return <div style={{ position:"relative", borderRadius:R, overflow:"hidden" }}>
     <div style={{ position:"absolute", inset:0, background:actionColor, color:"#fff", display:"flex", alignItems:"center", justifyContent:"flex-end", padding:"0 20px", fontWeight:700, fontSize:13 }}>{actionLabel}</div>
     <div
       ref={ref}
@@ -852,13 +853,13 @@ function CommandPalette({ open, onClose, tenants, issues, properties, contacts, 
   const query = q.trim().toLowerCase();
   const results = query.length === 0 ? [] : [
     ...properties.filter(p=>(p.name||"").toLowerCase().includes(query)||(p.address||"").toLowerCase().includes(query))
-      .slice(0,4).map(p=>({ type:"Fastighet", icon:"🏢", label:p.name, onSelect:()=>onNavigate("property", p.id) })),
+      .slice(0,4).map(p=>({ type:"Fastighet", icon:Building2, label:p.name, onSelect:()=>onNavigate("property", p.id) })),
     ...tenants.filter(t=>(t.name||"").toLowerCase().includes(query)||(t.unit||"").toLowerCase().includes(query))
-      .slice(0,5).map(t=>({ type:"Hyresgäst", icon:"👤", label:`${t.name||"Vakant"} · Lgh ${t.unit}`, onSelect:()=>onNavigate("tenants", t.property_id) })),
+      .slice(0,5).map(t=>({ type:"Hyresgäst", icon:User, label:`${t.name||"Vakant"} · Lgh ${t.unit}`, onSelect:()=>onNavigate("tenants", t.property_id) })),
     ...issues.filter(i=>(i.title||"").toLowerCase().includes(query))
-      .slice(0,4).map(i=>({ type:"Felanmälan", icon:"🔧", label:i.title, onSelect:()=>onNavigate("maintenance", i.property_id) })),
+      .slice(0,4).map(i=>({ type:"Felanmälan", icon:Wrench, label:i.title, onSelect:()=>onNavigate("maintenance", i.property_id) })),
     ...contacts.filter(c=>(c.name||"").toLowerCase().includes(query))
-      .slice(0,3).map(c=>({ type:"Kontakt", icon:"📇", label:c.name, onSelect:()=>onNavigate("contacts", null) })),
+      .slice(0,3).map(c=>({ type:"Kontakt", icon:Contact, label:c.name, onSelect:()=>onNavigate("contacts", null) })),
   ];
 
   return <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:300, display:"flex", alignItems:"flex-start", justifyContent:"center", paddingTop:"12vh" }} onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
@@ -872,7 +873,7 @@ function CommandPalette({ open, onClose, tenants, issues, properties, contacts, 
         style={{ width:"100%", border:"none", padding:"18px 20px", fontSize:16, outline:"none", borderBottom:"1px solid #eee", boxSizing:"border-box" }}
       />
       {results.map((r,i)=><div key={i} onClick={()=>{ r.onSelect(); onClose(); }} style={{ padding:"12px 20px", display:"flex", alignItems:"center", gap:10, fontSize:13, cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background="#f0faf4"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-        <span>{r.icon}</span><span>{r.label}</span><span style={{ marginLeft:"auto", fontSize:10, color:"#bbb", textTransform:"uppercase" }}>{r.type}</span>
+        <r.icon size={16} style={{color:"#888",flexShrink:0}}/><span>{r.label}</span><span style={{ marginLeft:"auto", fontSize:10, color:"#bbb", textTransform:"uppercase" }}>{r.type}</span>
       </div>)}
       {query && results.length===0 && <div style={{ padding:"20px", color:"#bbb", fontSize:13, textAlign:"center" }}>Inga träffar för "{q}"</div>}
       {!query && <div style={{ padding:"20px", color:"#ccc", fontSize:12, textAlign:"center" }}>Börja skriva för att söka · Esc för att stänga</div>}
@@ -1329,8 +1330,8 @@ function ProspektModal({ tenant, property, onClose }) {
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"16px 22px", borderBottom:"1px solid #eee", flexWrap:"wrap", gap:10 }}>
         <h3 style={{ fontSize:17, fontWeight:700, color:G }}><FileText size={14} style={{verticalAlign:"-2px"}}/> Prospekt – Lägenhet {tenant.unit}</h3>
         <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-          <button onClick={downloadJPEG} disabled={!!generating} style={btnStyle("#888")}>{generating==="jpeg"?"Genererar…":"⬇️ JPEG"}</button>
-          <button onClick={downloadPDF} disabled={!!generating} style={btnStyle(G)}>{generating==="pdf"?"Genererar…":"⬇️ PDF"}</button>
+          <button onClick={downloadJPEG} disabled={!!generating} style={btnStyle("#888")}>{generating==="jpeg"?"Genererar…":<><Download size={14} style={{verticalAlign:"-2px"}}/> JPEG</>}</button>
+          <button onClick={downloadPDF} disabled={!!generating} style={btnStyle(G)}>{generating==="pdf"?"Genererar…":<><Download size={14} style={{verticalAlign:"-2px"}}/> PDF</>}</button>
           <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}><X size={14} style={{verticalAlign:"-2px"}}/></button>
         </div>
       </div>
@@ -1440,7 +1441,7 @@ function ProspektModal({ tenant, property, onClose }) {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
-function Dashboard({ tenants, contracts, issues, properties, selectedProperty, onIssueAdded, loading }) {
+function Dashboard({ tenants, contracts, issues, properties, selectedProperty, onIssueAdded, loading, onOpenSearch }) {
   const d = useIsDesktop();
   const [proformas, setProformas] = useState([]);
   const [showIssueForm, setShowIssueForm] = useState(false);
@@ -1597,7 +1598,8 @@ Uthyrare: [fastighetsbolag]`;
       .filter(t => { const x=daysUntil(t.lease_end); return x!=null&&x>=0&&x<=120&&!contracts.some(c=>c.tenant_id===t.id&&c.end_date===t.lease_end); })
       .map(t => { const p=properties.find(x=>x.id===t.property_id), days=daysUntil(t.lease_end); return { key:"t-"+t.id, name:t.name, prop:p?.name, unit:t.unit, days, tenantId:t.id, propertyId:t.property_id, leaseEnd:t.lease_end, newTenantFound:t.new_tenant_found, newTenantFrom:t.new_tenant_from }; })
   ].sort((a,b)=>a.days-b.days);
-  const recent = [...issues].sort((a,b)=>(b.reported||"").localeCompare(a.reported||"")).slice(0,4);
+  const [optimisticDone, setOptimisticDone] = useState(() => new Set());
+  const recent = [...issues].filter(i=>!optimisticDone.has(i.id)).sort((a,b)=>(b.reported||"").localeCompare(a.reported||"")).slice(0,4);
 
   return <div>
     {selectedProperty&&<div className="rh-hover-lift" style={{ position:"relative", height:180, borderRadius:16, overflow:"hidden", marginBottom:20, background: selectedProperty.cover_image_url?"#000":`linear-gradient(135deg,#2d6a4f,${G})` }}>
@@ -1612,34 +1614,57 @@ Uthyrare: [fastighetsbolag]`;
       </div>
     </div>}
 
-    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
       <h2 style={{ fontSize:22, fontWeight:700, color:G }}>{selectedProperty?`Översikt – ${selectedProperty.name}`:"Översikt – Alla fastigheter"}</h2>
     </div>
 
-    {/* 4 primary KPI cards */}
+    {onOpenSearch&&<div className="rh-btn-press" onClick={onOpenSearch} style={{ display:"flex", alignItems:"center", gap:12, background:"#fff", border:"1.5px solid #e5e5e3", borderRadius:R, padding:"14px 16px", marginBottom:18, cursor:"pointer", boxShadow:"0 1px 2px rgba(0,0,0,0.03)" }}>
+      <Search size={17} style={{ color:"#999", flexShrink:0 }} />
+      <span style={{ flex:1, color:"#999", fontSize:14 }}>Sök hyresgäst, fastighet, ärende — eller tryck ⌘K var som helst</span>
+      <span style={{ background:"#f0faf4", color:G, borderRadius:7, padding:"4px 9px", fontSize:11.5, fontWeight:700 }}>⌘K</span>
+    </div>}
+
+    {/* Hero-siffra: hyresintäkt/mån får all visuell vikt, resten är mindre */}
     {loading ? (
-      <div style={{ display:"grid", gridTemplateColumns:d?"repeat(4,1fr)":"repeat(2,1fr)", gap:14, marginBottom:14 }}>
-        <KpiSkeleton /><KpiSkeleton /><KpiSkeleton /><KpiSkeleton />
+      <div style={{ marginBottom:14 }}>
+        <Skeleton height={98} style={{ borderRadius:R, marginBottom:14 }} />
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}><KpiSkeleton /><KpiSkeleton /><KpiSkeleton /></div>
       </div>
     ) : (
-    <div style={{ display:"grid", gridTemplateColumns:d?"repeat(4,1fr)":"repeat(2,1fr)", gap:14, marginBottom:14 }}>
-      <StatCard label="Hyresgäster" value={tenants.length} sub={`${properties.length} fastigheter`} />
-      <StatCard label="Öppna ärenden" value={openIssues} color={openIssues>0?"#f59e0b":"#22c55e"} sub={openIssues===0?"Inga öppna ärenden":undefined} />      <StatCard label="Hyresintäkt/mån" value={fmt(totalRentMon)} color={G} />
-      <StatCard label="Hyresintäkt/år" value={fmt(totalRentYear)} color={G} />
-    </div>
+    <>
+      <div style={{ background:G, color:"#fff", borderRadius:R, padding:"22px 22px 20px", marginBottom:12 }}>
+        <div style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.65)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:6 }}>Hyresintäkt / mån</div>
+        <div style={{ fontSize:36, fontWeight:800, letterSpacing:"-0.02em", lineHeight:1 }}>{fmt(totalRentMon)}</div>
+        <div style={{ fontSize:12.5, color:"rgba(255,255,255,0.6)", marginTop:8 }}>{fmt(totalRentYear)} / år · {tenants.length} hyresgäster · {properties.length} fastigheter</div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:14 }}>
+        <Card hoverable style={{ padding:"13px 14px" }}>
+          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:5 }}>Hyresgäster</div>
+          <div style={{ fontSize:17, fontWeight:800 }}>{tenants.length}</div>
+        </Card>
+        <Card hoverable style={{ padding:"13px 14px" }}>
+          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:5 }}>Öppna ärenden</div>
+          <div style={{ fontSize:17, fontWeight:800, color:openIssues>0?"#c2660c":"#22c55e" }}>{openIssues}</div>
+        </Card>
+        <Card hoverable style={{ padding:"13px 14px" }}>
+          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:5 }}>Hyresintäkt/år</div>
+          <div style={{ fontSize:17, fontWeight:800 }}>{fmt(totalRentYear)}</div>
+        </Card>
+      </div>
+    </>
     )}
 
-    {/* Secondary row - amortering */}
-    <div style={{ display:"grid", gridTemplateColumns:d?"repeat(2,1fr)":"repeat(2,1fr)", gap:14, marginBottom:24 }}>
-      <Card style={{ padding:"14px 18px", background:"#f0f4ff", border:"1px solid #c7d2fe" }}>
-        <div style={{ fontSize:12, color:"#6366f1", fontWeight:600, marginBottom:4 }}>AMORTERING / MÅN</div>
-        <div style={{ fontSize:20, fontWeight:800, color:"#4f46e5" }}>{fmt(totalAmorteringMon)}</div>
-        <div style={{ fontSize:11, color:"#818cf8", marginTop:2 }}>baserat på proforma</div>
+    {/* Amortering — samma gröna familj som allt annat, inte längre indigo */}
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:14, marginBottom:24 }}>
+      <Card style={{ padding:"14px 18px", background:"#f0faf4", border:"1px solid #a7f3d0" }}>
+        <div style={{ fontSize:12, color:G, fontWeight:600, marginBottom:4 }}>AMORTERING / MÅN</div>
+        <div style={{ fontSize:20, fontWeight:800, color:G }}>{fmt(totalAmorteringMon)}</div>
+        <div style={{ fontSize:11, color:"#5a8a72", marginTop:2 }}>baserat på proforma</div>
       </Card>
-      <Card style={{ padding:"14px 18px", background:"#f0f4ff", border:"1px solid #c7d2fe" }}>
-        <div style={{ fontSize:12, color:"#6366f1", fontWeight:600, marginBottom:4 }}>AMORTERING / ÅR</div>
-        <div style={{ fontSize:20, fontWeight:800, color:"#4f46e5" }}>{fmt(totalAmorteringYear)}</div>
-        <div style={{ fontSize:11, color:"#818cf8", marginTop:2 }}>baserat på proforma</div>
+      <Card style={{ padding:"14px 18px", background:"#f0faf4", border:"1px solid #a7f3d0" }}>
+        <div style={{ fontSize:12, color:G, fontWeight:600, marginBottom:4 }}>AMORTERING / ÅR</div>
+        <div style={{ fontSize:20, fontWeight:800, color:G }}>{fmt(totalAmorteringYear)}</div>
+        <div style={{ fontSize:11, color:"#5a8a72", marginTop:2 }}>baserat på proforma</div>
       </Card>
     </div>
 
@@ -1664,7 +1689,14 @@ Uthyrare: [fastighetsbolag]`;
               </div>
             </div>;
             if (i.status === "åtgärdad") return <div key={i.id}>{row}</div>;
-            return <SwipeableRow key={i.id} onComplete={async()=>{ await sb.from("issues").update({status:"åtgärdad"}).eq("id", i.id); toast(`"${i.title}" markerad som åtgärdad`); if (onIssueAdded) onIssueAdded(); }}>{row}</SwipeableRow>;
+            return <SwipeableRow key={i.id} onComplete={()=>{
+              setOptimisticDone(prev => new Set(prev).add(i.id)); // 1. UI:t litar på att det lyckas — direkt
+              toast(`"${i.title}" markerad som åtgärdad`);        // 2. bekräftelse direkt, ingen väntan på nätverket
+              sb.from("issues").update({status:"åtgärdad"}).eq("id", i.id).then(({error}) => {
+                if (error) { toast("Kunde inte spara — försök igen", "error"); setOptimisticDone(prev => { const next=new Set(prev); next.delete(i.id); return next; }); }
+                else if (onIssueAdded) onIssueAdded(); // 3. tyst bakgrundssynk när nätverket faktiskt svarat
+              });
+            }}>{row}</SwipeableRow>;
           })}
         </div>
       </Card>
@@ -1722,7 +1754,7 @@ Uthyrare: [fastighetsbolag]`;
       <FileUpload files={issueForm.files||[]} onChange={v=>setIssueForm(f=>({...f,files:v}))} bucket="issue-images" folder={issueForm.property_id||"misc"} />
       <div style={{ display:"flex", gap:10, marginTop:4 }}>
         <button onClick={saveIssue} disabled={saving||!issueForm.title} style={{ ...btnStyle(G), opacity:!issueForm.title?0.5:1 }}>{saving?"Sparar…":issueForm._editing?<><Save size={14} style={{verticalAlign:"-2px"}}/> Spara ändringar</>:<><Save size={14} style={{verticalAlign:"-2px"}}/> Spara felanmälan</>}</button>
-        {issueForm._editing&&<button onClick={()=>downloadIssueFromDash(issueForm)} style={{ ...btnStyle("#6366f1"),padding:"9px 14px",fontSize:14 }}>⬇️ Ladda ner</button>}
+        {issueForm._editing&&<button onClick={()=>downloadIssueFromDash(issueForm)} style={{ ...btnStyle("#6366f1"),padding:"9px 14px",fontSize:14 }}><Download size={14} style={{verticalAlign:"-2px"}}/> Ladda ner</button>}
         <button onClick={()=>{ setShowIssueForm(false); setIssueForm(null); }} style={btnStyle("#888")}>Avbryt</button>
       </div>
     </Modal>}
@@ -1764,7 +1796,7 @@ Uthyrare: [fastighetsbolag]`;
 
     {photoPickerOpen&&<Modal title="Byt fastighetsfoto" onClose={()=>setPhotoPickerOpen(false)}>
       <label htmlFor="cover-photo-upload" style={{ display:"block", border:"2px dashed #a7f3d0", borderRadius:12, padding:"22px 16px", textAlign:"center", color:"#888", fontSize:13, cursor:"pointer", marginBottom:18, background:"#f0faf4" }}>
-        {savingPhoto ? "Laddar upp…" : <>⬆️ Ladda upp ny bild</>}
+        {savingPhoto ? "Laddar upp…" : <><Upload size={14} style={{verticalAlign:"-2px"}}/> Ladda upp ny bild</>}
         <input id="cover-photo-upload" type="file" accept="image/*" onChange={uploadCoverImage} disabled={savingPhoto} style={{ display:"none" }} />
       </label>
       {propertyImages.length>0&&<>
@@ -1971,7 +2003,7 @@ function Inspections({ tenant, property }) {
             <span style={{ fontWeight:700,color:G,textTransform:"capitalize" }}>{ins.type}sbesiktning</span>
             <Badge label={ins.condition} color={conditionColors[ins.condition]||"#888"} />
           </div>
-          <div><button onClick={()=>downloadInspectionPDF(ins, tenant, property)} title="Ladda ner PDF" style={iconBtn}>⬇️</button><button onClick={()=>setForm({...ins,items:ins.items||[],files:ins.files||[]})} style={iconBtn}><Pencil size={14} style={{verticalAlign:"-2px"}}/></button><button onClick={()=>remove(ins.id)} style={iconBtn}><Trash2 size={14} style={{verticalAlign:"-2px"}}/></button></div>
+          <div><button onClick={()=>downloadInspectionPDF(ins, tenant, property)} title="Ladda ner PDF" style={iconBtn}><Download size={14} style={{verticalAlign:"-2px"}}/></button><button onClick={()=>setForm({...ins,items:ins.items||[],files:ins.files||[]})} style={iconBtn}><Pencil size={14} style={{verticalAlign:"-2px"}}/></button><button onClick={()=>remove(ins.id)} style={iconBtn}><Trash2 size={14} style={{verticalAlign:"-2px"}}/></button></div>
         </div>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10 }}>
           {[["Datum",ins.date],["Hyresgäst",ins.tenant_name||"–"],["Skick",ins.condition]].map(([l,v])=><div key={l}><div style={{ fontSize:11,color:"#aaa",fontWeight:600,textTransform:"uppercase" }}>{l}</div><div style={{ fontSize:13,fontWeight:600,color:G,marginTop:2 }}>{v}</div></div>)}
@@ -2041,7 +2073,7 @@ function ApartmentDetail({ tenant, properties, onBack, onRefresh }) {
   const tabs = [["info",<Clipboard size={14} style={{verticalAlign:"-2px"}}/>,"Info"],["docs",<FolderOpen size={14} style={{verticalAlign:"-2px"}}/>,"Dokument"],["issues",<Wrench size={14} style={{verticalAlign:"-2px"}}/>,"Felanmälan"],["inspections",<Search size={14} style={{verticalAlign:"-2px"}}/>,"Besiktning"]];
 
   return <div>
-    <button onClick={onBack} style={{ background:"none",border:"none",cursor:"pointer",color:"#6366f1",fontWeight:600,fontSize:14,padding:0,marginBottom:14 }}>← Tillbaka</button>
+    <button onClick={onBack} style={{ background:"none",border:"none",cursor:"pointer",color:"#6366f1",fontWeight:600,fontSize:14,padding:0,marginBottom:14,display:"inline-flex",alignItems:"center",gap:4 }}><ArrowLeft size={14}/> Tillbaka</button>
     <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12,marginBottom:20 }}>
       <div>
         <div style={{ display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" }}>
@@ -2204,7 +2236,7 @@ function TenantIssues({ tenant }) {
     {form&&<div style={{ marginTop:16,border:"1.5px solid #e0e0e0",borderRadius:14,padding:20 }}>
       <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14 }}>
         <div style={{ fontWeight:700,color:G }}>{form.id?"Redigera ärende":"Nytt ärende"}</div>
-        {form.id&&<button onClick={()=>downloadPDF(form)} style={{ ...btnStyle("#6366f1"),padding:"6px 14px",fontSize:13 }}>⬇️ Ladda ner</button>}
+        {form.id&&<button onClick={()=>downloadPDF(form)} style={{ ...btnStyle("#6366f1"),padding:"6px 14px",fontSize:13 }}><Download size={14} style={{verticalAlign:"-2px"}}/> Ladda ner</button>}
       </div>
       <label style={labelStyle}>Rubrik</label><input value={form.title||""} onChange={e=>setForm({...form,title:e.target.value})} style={inputStyle} />
       <label style={labelStyle}>Beskrivning</label><textarea value={form.description||""} onChange={e=>setForm({...form,description:e.target.value})} style={{...inputStyle,height:60,resize:"vertical"}} />
@@ -2297,7 +2329,7 @@ function Apartments({ propertyId, properties }) {
         </div>
         <div style={{ color:"#d1d5db",fontSize:18 }}>›</div>
       </div>)}
-      {filtered.length===0&&<div style={{ gridColumn:"1/-1" }}><EmptyState icon="🏠" title="Inga lägenheter ännu" description="Lägg till er första lägenhet för att komma igång." actionLabel="+ Lägg till lägenhet" onAction={()=>setAddForm({unit:"",name:"",email:"",phone:"",rent:"",sqm:"",floor:"",balcony:false,parking:false,notes:"",move_in:"",lease_end:"",status:"aktiv"})} /></div>}
+      {filtered.length===0&&<div style={{ gridColumn:"1/-1" }}><EmptyState icon={<Home size={40}/>} title="Inga lägenheter ännu" description="Lägg till er första lägenhet så börjar vi räkna hyresintäkt, bevaka kontraktsslut och hålla koll på felanmälningar automatiskt." actionLabel="+ Lägg till lägenhet" onAction={()=>setAddForm({unit:"",name:"",email:"",phone:"",rent:"",sqm:"",floor:"",balcony:false,parking:false,notes:"",move_in:"",lease_end:"",status:"aktiv"})} /></div>}
     </div>
     {addForm&&<Modal title="Lägg till lägenhet" onClose={()=>setAddForm(null)}>
       <div style={{ display:"flex",gap:12 }}>
@@ -2406,10 +2438,10 @@ function Maintenance({ propertyId, properties }) {
         </div>
       </Card>;
     })}
-    {filtered.length===0&&<EmptyState icon="🔧" title="Inga ärenden ännu" description="Skapa er första felanmälan för den här fastigheten." actionLabel="+ Nytt ärende" onAction={()=>setForm(blank)} />}
+    {filtered.length===0&&<EmptyState icon={<Wrench size={40}/>} title="Inga ärenden ännu" description="Skapa er första felanmälan så får ni automatisk statushistorik och kan bifoga bilder direkt från mobilen." actionLabel="+ Nytt ärende" onAction={()=>setForm(blank)} />}
     {form&&<Modal title={form.id?"Redigera ärende":"Nytt ärende"} onClose={()=>setForm(null)}>
       {form.id&&<div style={{ display:"flex",justifyContent:"flex-end",marginBottom:12 }}>
-        <button onClick={()=>downloadIssue(form)} style={{ ...btnStyle("#6366f1"),padding:"6px 14px",fontSize:13 }}>⬇️ Ladda ner</button>
+        <button onClick={()=>downloadIssue(form)} style={{ ...btnStyle("#6366f1"),padding:"6px 14px",fontSize:13 }}><Download size={14} style={{verticalAlign:"-2px"}}/> Ladda ner</button>
       </div>}
       <label style={labelStyle}>Lägenhet</label>
       {tenants.length>0?<select value={form.unit||""} onChange={e=>setForm({...form,unit:e.target.value})} style={inputStyle}><option value="">– Välj –</option>{tenants.map(t=><option key={t.id} value={t.unit}>Lgh {t.unit}{t.name?` – ${t.name}`:""}</option>)}</select>:<input value={form.unit||""} onChange={e=>setForm({...form,unit:e.target.value})} style={inputStyle} placeholder="t.ex. 2A" />}
@@ -2575,7 +2607,7 @@ function Contacts() {
           <div><button onClick={()=>setForm({...c})} style={iconBtn}><Pencil size={14} style={{verticalAlign:"-2px"}}/></button><button onClick={()=>remove(c.id)} style={iconBtn}><Trash2 size={14} style={{verticalAlign:"-2px"}}/></button></div>
         </div>
       </Card>)}
-      {filtered.length===0&&<div style={{ gridColumn:"1/-1" }}><EmptyState icon="📇" title="Inga kontakter ännu" description="Lägg till leverantörer och kontaktpersoner ni samarbetar med." actionLabel="+ Lägg till" onAction={()=>setForm({name:"",category:"VVS",phone:"",email:"",contact_person:"",notes:""})} /></div>}
+      {filtered.length===0&&<div style={{ gridColumn:"1/-1" }}><EmptyState icon={<Contact size={40}/>} title="Inga kontakter ännu" description="Lägg till er första leverantör så har ni allas kontaktuppgifter samlade nästa gång något behöver åtgärdas." actionLabel="+ Lägg till" onAction={()=>setForm({name:"",category:"VVS",phone:"",email:"",contact_person:"",notes:""})} /></div>}
     </div>
     {form&&<Modal title={form.id?"Redigera":"Ny kontakt"} onClose={()=>setForm(null)}>
       <label style={labelStyle}>Namn</label><input value={form.name||""} onChange={e=>setForm({...form,name:e.target.value})} style={inputStyle} />
@@ -2839,7 +2871,7 @@ function RentLog({ propertyId, properties }) {
     <RentTrendGraph propertyId={propertyId} tenants={tenants} />
 
     {/* History */}
-    {logs.length===0&&!form&&<EmptyState icon="📈" title="Inga hyreshöjningar registrerade" description="Registrera er första hyreshöjning för att se historik och trendgraf." actionLabel="+ Registrera höjning" onAction={()=>setForm(true)} />}
+    {logs.length===0&&!form&&<EmptyState icon={<TrendingUp size={40}/>} title="Inga hyreshöjningar registrerade" description="Registrera er första hyreshöjning så bygger vi automatiskt en trendgraf och håller koll på procentuell utveckling år för år." actionLabel="+ Registrera höjning" onAction={()=>setForm(true)} />}
 
     <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
       {Object.values(grouped).map((g,idx)=>{
@@ -3153,7 +3185,7 @@ function ExportPanel({ propertyId, properties }) {
             </div>
           </div>
           <button onClick={()=>exportCSV(e.type)} disabled={loading} style={{ ...btnStyle(G),flexShrink:0,marginLeft:16 }}>
-            ⬇️ Ladda ner
+            <Download size={14} style={{verticalAlign:"-2px"}}/> Ladda ner
           </button>
         </div>
       </Card>)}
@@ -3271,7 +3303,7 @@ const SUBTABS = [
   { id:"proforma", label:"Proforma", icon:<Wallet size={14} style={{verticalAlign:"-2px"}}/> },
   { id:"images", label:"Bilder", icon:<Image size={14} style={{verticalAlign:"-2px"}}/> },
   { id:"intresse", label:"Intresseanmälan", icon:<Clipboard size={14} style={{verticalAlign:"-2px"}}/> },
-  { id:"export", label:"Exportera", icon:"⬇️" },
+  { id:"export", label:"Exportera", icon:<Download size={14} style={{verticalAlign:"-2px"}}/> },
 ];
 
 // ── PROPERTY GALLERY ───────────────────────────────────────────────────────────
@@ -3477,14 +3509,14 @@ export default function App() {
   return <div style={{ display:"flex", minHeight:"100vh", background:"#f4f5f7", fontFamily:"'Inter',system-ui,sans-serif", overflow:"hidden" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
     {sidebarOpen&&!isDesktop&&<div onClick={()=>setSidebarOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:40 }} />}
     <aside style={{ width:SIDEBAR_W, background:G, display:"flex", flexDirection:"column", padding:"28px 0", flexShrink:0, ...(isDesktop?{ position:"relative",transform:"none",zIndex:1 }:{ position:"fixed",top:0,left:0,bottom:0,zIndex:50,transform:sidebarOpen?"translateX(0)":`translateX(-${SIDEBAR_W}px)`,transition:"transform 0.25s cubic-bezier(0.4,0,0.2,1)",boxShadow:sidebarOpen?"4px 0 24px rgba(0,0,0,0.3)":"none" }) }}>
-      <div style={{ padding:"20px 16px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+      {!isDesktop&&<div style={{ padding:"20px 16px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
           <div style={{ background:"#fff", borderRadius:12, padding:"6px 10px", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, boxShadow:"0 2px 8px rgba(0,0,0,0.18)" }}>
             <img src={LOGO} alt="Rolandhem Fastigheter AB" style={{ height:36, width:"auto", objectFit:"contain", display:"block" }} />
           </div>
         </div>
-        <button onClick={()=>setSidebarOpen(false)} style={{ background:"rgba(255,255,255,0.07)",border:"none",color:"rgba(255,255,255,0.5)",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,display:isDesktop?"none":"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><X size={14} style={{verticalAlign:"-2px"}}/></button>
-      </div>
+        <button onClick={()=>setSidebarOpen(false)} style={{ background:"rgba(255,255,255,0.07)",border:"none",color:"rgba(255,255,255,0.5)",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><X size={14} style={{verticalAlign:"-2px"}}/></button>
+      </div>}
       <nav style={{ flex:1, padding:"14px 0", overflowY:"auto" }}>
         <NavRow icon={<Building2 size={14} style={{verticalAlign:"-2px"}}/>} label="Översikt" active={nav.type==="overview"} onClick={goOverview} />
         <NavRow icon={<Search size={14} style={{verticalAlign:"-2px"}}/>} label="Sök" active={nav.type==="search"} onClick={goSearch} />
@@ -3544,10 +3576,10 @@ export default function App() {
         </button>
       </div>
       <div style={{ padding:isDesktop?"28px 32px":"16px",flex:1 }}>
-        {nav.type==="overview"&&<Dashboard tenants={allTenants} contracts={allContracts} issues={allIssues} properties={properties} selectedProperty={null} onIssueAdded={loadGlobal} loading={globalLoading} />}
+        {nav.type==="overview"&&<Dashboard tenants={allTenants} contracts={allContracts} issues={allIssues} properties={properties} selectedProperty={null} onIssueAdded={loadGlobal} loading={globalLoading} onOpenSearch={()=>setCmdkOpen(true)} />}
         {nav.type==="search"&&<GlobalSearch properties={properties} onNavigate={(tab,propId)=>{ setNav({type:"property",propertyId:propId,tab}); }} />}
         {nav.type==="contacts"&&<Contacts />}
-        {nav.type==="property"&&nav.tab==="overview"&&selectedProperty&&<Dashboard tenants={filteredTenants} contracts={filteredContracts} issues={filteredIssues} properties={properties} selectedProperty={selectedProperty} onIssueAdded={loadGlobal} loading={globalLoading} />}
+        {nav.type==="property"&&nav.tab==="overview"&&selectedProperty&&<Dashboard tenants={filteredTenants} contracts={filteredContracts} issues={filteredIssues} properties={properties} selectedProperty={selectedProperty} onIssueAdded={loadGlobal} loading={globalLoading} onOpenSearch={()=>setCmdkOpen(true)} />}
         {nav.type==="property"&&nav.tab==="tenants"&&selectedProperty&&<Apartments propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="maintenance"&&selectedProperty&&<Maintenance propertyId={selectedProperty.id} properties={properties} />}
         {nav.type==="property"&&nav.tab==="planned"&&selectedProperty&&<PlannedMaintenance propertyId={selectedProperty.id} />}
