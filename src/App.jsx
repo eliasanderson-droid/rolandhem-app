@@ -663,6 +663,8 @@ function DSResponsiveStyles() {
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const G = "#1a3d2b";
 const R = 14; // EN radie för alla stora ytor (kort, modaler, paneler) — ersätter tidigare 16/12/10/8 blandat
+const SHADOW = { sm:"0 1px 2px rgba(0,0,0,0.04)", md:"0 8px 24px rgba(0,0,0,0.08)", lg:"0 24px 60px rgba(0,0,0,0.16)" };
+const SPACE = { xs:4, sm:8, md:12, lg:16, xl:24, xxl:32 };
 const btnStyle = bg => ({ background:bg, color:"#fff", border:"none", borderRadius:8, padding:"9px 18px", cursor:"pointer", fontWeight:600, fontSize:14 });
 const iconBtn = { background:"none", border:"none", cursor:"pointer", fontSize:16, padding:"2px 4px" };
 const inputStyle = { width:"100%", padding:"9px 12px", borderRadius:8, border:"1px solid #e0e0e0", fontSize:16, marginBottom:12, boxSizing:"border-box", display:"block" };
@@ -688,7 +690,7 @@ function Badge({ label, color="#888" }) {
   return <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:6, padding:"2px 10px", fontSize:12, fontWeight:600 }}>{label}</span>;
 }
 function Card({ children, style, hoverable }) {
-  return <div className={hoverable?"rh-hover-lift":""} style={{ background:"#fff", borderRadius:R, border:"1px solid #efefef", padding:24, boxShadow:"0 1px 3px rgba(0,0,0,0.04)", ...style }}>{children}</div>;
+  return <div className={hoverable?"rh-hover-lift":""} style={{ background:"#fff", borderRadius:R, border:"1px solid #efefef", padding:24, boxShadow:SHADOW.sm, lineHeight:1.5, ...style }}>{children}</div>;
 }
 function StatCard({ label, value, sub, color=G }) {
   return <Card hoverable style={{ flex:1, minWidth:130, padding:"16px 20px" }}>
@@ -699,7 +701,7 @@ function StatCard({ label, value, sub, color=G }) {
 }
 function Modal({ title, children, onClose }) {
   return <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100, padding:20 }}>
-    <div style={{ background:"#fff", borderRadius:R, padding:28, width:"100%", maxWidth:500, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}>
+    <div className="rh-page-fade" style={{ background:"#fff", borderRadius:R, padding:28, width:"100%", maxWidth:500, maxHeight:"90vh", overflowY:"auto", boxShadow:SHADOW.lg, lineHeight:1.5 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
         <h3 style={{ fontSize:18, fontWeight:700, color:G }}>{title}</h3>
         <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"#888" }}><X size={14} style={{verticalAlign:"-2px"}}/></button>
@@ -735,7 +737,10 @@ function GlobalMicroStyles() {
     button:not(:disabled) { transition: transform .1s ease, filter .12s ease, box-shadow .15s ease; }
     button:not(:disabled):hover { filter: brightness(1.05); }
     button:not(:disabled):active { transform: scale(0.96); }
+    button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 2px solid ${G}; outline-offset: 2px; }
     input:focus, select:focus, textarea:focus { outline:none; border-color:${G} !important; box-shadow:0 0 0 3px rgba(26,61,43,0.12); transition: box-shadow .12s ease, border-color .12s ease; }
+    .rh-page-fade { animation: rh-fade-in .18s ease; }
+    @keyframes rh-fade-in { from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
     .rh-hover-lift { transition: transform .15s cubic-bezier(.4,0,.2,1), box-shadow .15s ease; }
     .rh-hover-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
     .rh-btn-press { transition: transform .1s ease, filter .12s ease; }
@@ -766,9 +771,38 @@ function RowSkeleton() {
   </div>;
 }
 
-// ── TOAST (ersätter alert()/confirm() för icke-blockerande bekräftelser) ──────
+// ── TOAST (ersätter alert() för icke-blockerande bekräftelser) ────────────────
 function toast(message, type="success") {
   window.dispatchEvent(new CustomEvent("rh-toast", { detail: { message, type } }));
+}
+
+// ── CONFIRM DIALOG (ersätter window.confirm() med en riktig, stilad dialog) ───
+let _confirmResolver = null;
+function confirmDialog(message, { danger=true, confirmLabel="Ta bort" } = {}) {
+  return new Promise(resolve => {
+    _confirmResolver = resolve;
+    window.dispatchEvent(new CustomEvent("rh-confirm", { detail: { message, danger, confirmLabel } }));
+  });
+}
+function ConfirmDialogHost() {
+  const [state, setState] = useState(null);
+  useEffect(() => {
+    function onConfirm(e) { setState(e.detail); }
+    window.addEventListener("rh-confirm", onConfirm);
+    return () => window.removeEventListener("rh-confirm", onConfirm);
+  }, []);
+  function respond(val) {
+    setState(null);
+    if (_confirmResolver) { _confirmResolver(val); _confirmResolver = null; }
+  }
+  if (!state) return null;
+  return <Modal title="Bekräfta" onClose={()=>respond(false)}>
+    <p style={{ fontSize:14, color:"#444", marginTop:0, lineHeight:1.5 }}>{state.message}</p>
+    <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+      <button className="rh-btn-press" onClick={()=>respond(false)} style={btnStyle("#888")}>Avbryt</button>
+      <button className="rh-btn-press" onClick={()=>respond(true)} style={btnStyle(state.danger?"#dc2626":G)}>{state.confirmLabel}</button>
+    </div>
+  </Modal>;
 }
 function ToastContainer() {
   const [items, setItems] = useState([]);
@@ -1618,12 +1652,6 @@ Uthyrare: [fastighetsbolag]`;
       <h2 style={{ fontSize:22, fontWeight:700, color:G }}>{selectedProperty?`Översikt – ${selectedProperty.name}`:"Översikt – Alla fastigheter"}</h2>
     </div>
 
-    {onOpenSearch&&<div className="rh-btn-press" onClick={onOpenSearch} style={{ display:"flex", alignItems:"center", gap:12, background:"#fff", border:"1.5px solid #e5e5e3", borderRadius:R, padding:"14px 16px", marginBottom:18, cursor:"pointer", boxShadow:"0 1px 2px rgba(0,0,0,0.03)" }}>
-      <Search size={17} style={{ color:"#999", flexShrink:0 }} />
-      <span style={{ flex:1, color:"#999", fontSize:14 }}>Sök hyresgäst, fastighet, ärende — eller tryck ⌘K var som helst</span>
-      <span style={{ background:"#f0faf4", color:G, borderRadius:7, padding:"4px 9px", fontSize:11.5, fontWeight:700 }}>⌘K</span>
-    </div>}
-
     {/* Hero-siffra: hyresintäkt/mån får all visuell vikt, resten är mindre */}
     {loading ? (
       <div style={{ marginBottom:14 }}>
@@ -1831,7 +1859,7 @@ function ContractsPanel({ tenant, onRefresh }) {
     setForm(null); load();
   }
   async function remove(id) {
-    if (!confirm("Ta bort?")) return;
+    if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return;
     await sb.from("contracts").delete().eq("id", id); load();
   }
 
@@ -1916,7 +1944,7 @@ function Documents({ tenant }) {
     setUploading(false);
   }
   async function remove(id, filePath) {
-    if (!confirm("Ta bort?")) return;
+    if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return;
     if (filePath) await sb.storage.from("documents").remove([filePath]);
     await sb.from("documents").delete().eq("id", id); load();
   }
@@ -1979,7 +2007,7 @@ function Inspections({ tenant, property }) {
     else await sb.from("inspections").insert([item]);
     setForm(null); load();
   }
-  async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("inspections").delete().eq("id", id); load(); }
+  async function remove(id) { if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return; await sb.from("inspections").delete().eq("id", id); load(); }
   function addRoom(r) { if (!form.items?.find(x=>x.room===r)) setForm({...form,items:[...(form.items||[]),{room:r,note:""}]}); }
 
   const blank = { tenant_id:tenant.id, type:"inflyttning", date:new Date().toISOString().slice(0,10), tenant_name:tenant.name||"", condition:"bra", notes:"", items:[], files:[] };
@@ -2188,7 +2216,7 @@ function TenantIssues({ tenant }) {
     else await sb.from("issues").insert([item]);
     setForm(null); load();
   }
-  async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("issues").delete().eq("id", id); load(); }
+  async function remove(id) { if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return; await sb.from("issues").delete().eq("id", id); load(); }
   async function handleImage(e) {
     const file = e.target.files[0]; if (!file) return;
     try {
@@ -2296,7 +2324,7 @@ function Apartments({ propertyId, properties }) {
     setAddForm(null); load();
   }
   async function remove(id) {
-    if (!confirm("Ta bort lägenhet?")) return;
+    if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort lägenheten?"))) return;
     await sb.from("tenants").delete().eq("id", id); load();
   }
 
@@ -2384,7 +2412,7 @@ function Maintenance({ propertyId, properties }) {
     else await sb.from("issues").insert([item]);
     setForm(null); load();
   }
-  async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("issues").delete().eq("id", id); load(); }
+  async function remove(id) { if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return; await sb.from("issues").delete().eq("id", id); load(); }
   async function handleImage(e) {
     const file = e.target.files[0]; if (!file) return;
     setUploading(true);
@@ -2486,7 +2514,7 @@ function PlannedMaintenance({ propertyId }) {
     else await sb.from("planned_maintenance").insert([item]);
     setForm(null); load();
   }
-  async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("planned_maintenance").delete().eq("id", id); load(); }
+  async function remove(id) { if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return; await sb.from("planned_maintenance").delete().eq("id", id); load(); }
 
   const filtered = planned.filter(p => filter==="alla"||p.status===filter);
   const totalCost = filtered.reduce((s,p)=>s+(Number(p.estimated_cost)||0),0);
@@ -2574,7 +2602,7 @@ function Contacts() {
     else await sb.from("contacts").insert([form]);
     setForm(null); load();
   }
-  async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("contacts").delete().eq("id", id); load(); }
+  async function remove(id) { if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return; await sb.from("contacts").delete().eq("id", id); load(); }
 
   const usedCats = ["alla",...new Set(contacts.map(c=>c.category).filter(Boolean))];
   const filtered = contacts.filter(c=>(filterCat==="alla"||c.category===filterCat)&&((c.name||"").toLowerCase().includes(search.toLowerCase())||(c.contact_person||"").toLowerCase().includes(search.toLowerCase())));
@@ -2851,7 +2879,7 @@ function RentLog({ propertyId, properties }) {
     toast(`Hyreshöjning på +${pct}% registrerad för ${logEntries.length} lägenhet${logEntries.length===1?"":"er"}`);
   }
 
-  async function remove(id) { if (!confirm("Ta bort?")) return; await sb.from("rent_log").delete().eq("id", id); loadLogs(); }
+  async function remove(id) { if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return; await sb.from("rent_log").delete().eq("id", id); loadLogs(); }
 
   // Group logs by date+reason
   const grouped = {};
@@ -3224,7 +3252,7 @@ function Intresse({ propertyId }) {
   }
 
   async function remove(id) {
-    if (!confirm("Ta bort anmälan?")) return;
+    if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort anmälan?"))) return;
     await sb.from("intresse").delete().eq("id", id); load();
   }
 
@@ -3343,7 +3371,7 @@ function PropertyGallery({ propertyId }) {
   }
 
   async function remove(img) {
-    if (!confirm("Ta bort bild?")) return;
+    if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort bilden?"))) return;
     if (img.file_path) await sb.storage.from("property-images").remove([img.file_path]);
     await sb.from("property_images").delete().eq("id", img.id);
     load();
@@ -3603,6 +3631,7 @@ export default function App() {
     </Modal>}
     <GlobalMicroStyles />
     <ToastContainer />
+    <ConfirmDialogHost />
     <CommandPalette open={cmdkOpen} onClose={()=>setCmdkOpen(false)} tenants={allTenants} issues={allIssues} properties={properties} contacts={[]} onNavigate={cmdkNavigate} />
   </div>;
 }
