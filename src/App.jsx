@@ -661,9 +661,9 @@ function DSResponsiveStyles() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
-const G = "#1a3d2b";
-const R = 14; // EN radie för alla stora ytor (kort, modaler, paneler) — ersätter tidigare 16/12/10/8 blandat
-const SHADOW = { sm:"0 1px 2px rgba(0,0,0,0.04)", md:"0 8px 24px rgba(0,0,0,0.08)", lg:"0 24px 60px rgba(0,0,0,0.16)" };
+const G = "#0F3D2E"; // Nordic Craft — permanent identitet (Förslag 2)
+const R = 10; // Nordic Craft radie — mindre, exaktare än tidigare 14
+const SHADOW = { sm:"0 1px 2px rgba(0,0,0,0.03)", md:"0 4px 14px rgba(0,0,0,0.06)", lg:"0 20px 50px rgba(0,0,0,0.14)" };
 const SPACE = { xs:4, sm:8, md:12, lg:16, xl:24, xxl:32 };
 const btnStyle = bg => ({ background:bg, color:"#fff", border:"none", borderRadius:8, padding:"9px 18px", cursor:"pointer", fontWeight:600, fontSize:14 });
 const iconBtn = { background:"none", border:"none", cursor:"pointer", fontSize:16, padding:"2px 4px" };
@@ -687,7 +687,7 @@ function daysUntil(d) { if (!d) return null; return Math.ceil((new Date(d)-new D
 
 // ── SHARED COMPONENTS ─────────────────────────────────────────────────────────
 function Badge({ label, color="#888" }) {
-  return <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:6, padding:"2px 10px", fontSize:12, fontWeight:600 }}>{label}</span>;
+  return <span style={{ background:color+"1a", color, borderRadius:6, padding:"2.5px 8px", fontSize:11, fontWeight:700 }}>{label}</span>;
 }
 function Card({ children, style, hoverable }) {
   return <div className={hoverable?"rh-hover-lift":""} style={{ background:"#fff", borderRadius:R, border:"1px solid #efefef", padding:24, boxShadow:SHADOW.sm, lineHeight:1.5, ...style }}>{children}</div>;
@@ -1652,34 +1652,27 @@ Uthyrare: [fastighetsbolag]`;
       <h2 style={{ fontSize:22, fontWeight:700, color:G }}>{selectedProperty?`Översikt – ${selectedProperty.name}`:"Översikt – Alla fastigheter"}</h2>
     </div>
 
-    {/* Hero-siffra: hyresintäkt/mån får all visuell vikt, resten är mindre */}
+    {/* Hero-siffra: Nordic Craft-rutnät — ett sammanhängande block med hårfina dividers istället för separata kort */}
     {loading ? (
-      <div style={{ marginBottom:14 }}>
-        <Skeleton height={98} style={{ borderRadius:R, marginBottom:14 }} />
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}><KpiSkeleton /><KpiSkeleton /><KpiSkeleton /></div>
-      </div>
+      <Skeleton height={d?110:220} style={{ borderRadius:R, marginBottom:14 }} />
     ) : (
-    <>
-      <div style={{ background:G, color:"#fff", borderRadius:R, padding:"22px 22px 20px", marginBottom:12 }}>
-        <div style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.65)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:6 }}>Hyresintäkt / mån</div>
-        <div style={{ fontSize:36, fontWeight:800, letterSpacing:"-0.02em", lineHeight:1 }}>{fmt(totalRentMon)}</div>
-        <div style={{ fontSize:12.5, color:"rgba(255,255,255,0.6)", marginTop:8 }}>{fmt(totalRentYear)} / år · {tenants.length} hyresgäster · {properties.length} fastigheter</div>
+      <div className="rh-hover-lift" style={{ display:"grid", gridTemplateColumns:d?"2fr 1fr 1fr":"1fr", gap:1, background:"#E5E5E3", border:"1px solid #E5E5E3", borderRadius:R, overflow:"hidden", marginBottom:14 }}>
+        <div style={{ background:G, color:"#fff", padding:"18px 20px" }}>
+          <div style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.62)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:6 }}>Hyresintäkt / mån</div>
+          <div style={{ fontSize:d?32:28, fontWeight:800, letterSpacing:"-0.02em", lineHeight:1 }}>{fmt(totalRentMon)}</div>
+          <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.58)", marginTop:8 }}>{fmt(totalRentYear)} / år · {tenants.length} hyresgäster · {properties.length} fastigheter</div>
+        </div>
+        <div style={{ background:"#fff", padding:"18px 20px" }}>
+          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>Hyresgäster</div>
+          <div style={{ fontSize:22, fontWeight:800 }}>{tenants.length}</div>
+          <div style={{ fontSize:11, color:"#bbb", marginTop:4 }}>{properties.length} fastigheter</div>
+        </div>
+        <div style={{ background:"#fff", padding:"18px 20px" }}>
+          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>Öppna ärenden</div>
+          <div style={{ fontSize:22, fontWeight:800, color:openIssues>0?"#c2660c":"#22c55e" }}>{openIssues}</div>
+          <div style={{ fontSize:11, color:"#bbb", marginTop:4 }}>{openIssues===0?"Inga öppna":"kräver åtgärd"}</div>
+        </div>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:14 }}>
-        <Card hoverable style={{ padding:"13px 14px" }}>
-          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:5 }}>Hyresgäster</div>
-          <div style={{ fontSize:17, fontWeight:800 }}>{tenants.length}</div>
-        </Card>
-        <Card hoverable style={{ padding:"13px 14px" }}>
-          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:5 }}>Öppna ärenden</div>
-          <div style={{ fontSize:17, fontWeight:800, color:openIssues>0?"#c2660c":"#22c55e" }}>{openIssues}</div>
-        </Card>
-        <Card hoverable style={{ padding:"13px 14px" }}>
-          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:5 }}>Hyresintäkt/år</div>
-          <div style={{ fontSize:17, fontWeight:800 }}>{fmt(totalRentYear)}</div>
-        </Card>
-      </div>
-    </>
     )}
 
     {/* Amortering — samma gröna familj som allt annat, inte längre indigo */}
