@@ -1690,24 +1690,23 @@ Uthyrare: [fastighetsbolag]`;
     </div>
 
     <div style={{ display:"grid", gridTemplateColumns:d?"1fr 1fr":"1fr", gap:20 }}>
-      <Card>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-          <h3 style={{ fontSize:15, fontWeight:700, color:G }}>Senaste felanmälningar</h3>
-          <button onClick={openIssueForm} title="Ny felanmälan" style={{ width:32, height:32, borderRadius:"50%", background:G, color:"#fff", border:"none", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 2px 6px rgba(26,61,43,0.3)", lineHeight:1 }}>+</button>
+      <div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+          <h3 style={{ fontSize:16, fontWeight:800, color:G }}>Senaste felanmälningar</h3>
+          <button onClick={openIssueForm} title="Ny felanmälan" style={{ width:32, height:32, borderRadius:"50%", background:G, color:"#fff", border:"none", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 2px 6px rgba(15,61,46,0.3)", lineHeight:1 }}>+</button>
         </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {recent.length===0?<div style={{ color:"#aaa" }}>Inga ärenden.</div>:recent.map(i=>{
+        <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:20, overflow:"hidden" }}>
+          {recent.length===0?<div style={{ color:"#aaa", padding:20 }}>Inga ärenden.</div>:recent.map((i,idx)=>{
             const prop=properties.find(p=>p.id===i.property_id);
-            const row = <div onClick={()=>openEditIssue(i)} style={{ borderLeft:`3px solid ${priorityColor[i.priority]}`, paddingLeft:12, cursor:"pointer", padding:"8px 12px", borderRadius:8, background:priorityBg[i.priority]||"#fafafa", border:`1px solid ${priorityBorder[i.priority]||"#eee"}`, borderLeftWidth:3, borderLeftColor:priorityColor[i.priority], transition:"filter 0.1s" }} onMouseEnter={e=>e.currentTarget.style.filter="brightness(0.97)"} onMouseLeave={e=>e.currentTarget.style.filter="none"}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                <div style={{ fontWeight:600, color:G, fontSize:14 }}>{i.title}</div>
-                <span style={{ color:"#d1d5db", fontSize:14, marginLeft:8 }}>›</span>
+            const pillColor = i.status==="ny"?{bg:"#FBEEEC",fg:"#B03A2E"}:i.status==="pågående"?{bg:"#FCF0E4",fg:"#B5651D"}:{bg:"#EEF3EC",fg:G};
+            const row = <div onClick={()=>openEditIssue(i)} style={{ display:"flex", alignItems:"center", gap:13, padding:"14px 20px", borderTop:idx===0?"none":"1px solid #EAE7DF", cursor:"pointer", background:"#fff" }} onMouseEnter={e=>e.currentTarget.style.background="#FAFAF8"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:700, fontSize:13.5 }}>{i.title}</div>
+                <div style={{ fontSize:11.5, color:"#84887E", marginTop:2 }}>{prop?.name}{i.unit&&` · Lgh ${i.unit}`} · {i.reported}</div>
+                {(i.files||[]).length>0&&<div style={{ fontSize:11,color:"#6366f1",marginTop:4 }}><Paperclip size={12} style={{verticalAlign:"-2px"}}/> {i.files.length} fil{i.files.length>1?"er":""}</div>}
               </div>
-              <div style={{ fontSize:12, color:"#888", marginTop:3 }}>{prop?.name}{i.unit&&` · Lgh ${i.unit}`} · {i.reported}</div>
-              <div style={{ display:"flex",gap:8,marginTop:4,alignItems:"center" }}>
-                <Badge label={i.status} color={statusColor[i.status]} />
-                {(i.files||[]).length>0&&<span style={{ fontSize:12,color:"#6366f1" }}><Paperclip size={14} style={{verticalAlign:"-2px"}}/> {i.files.length} fil{i.files.length>1?"er":""}</span>}
-              </div>
+              <span style={{ display:"inline-flex", alignItems:"center", borderRadius:999, padding:"3.5px 11px", fontSize:10.5, fontWeight:700, background:pillColor.bg, color:pillColor.fg, flexShrink:0 }}>{i.status}</span>
+              <span style={{ color:"#84887E", flexShrink:0 }}>›</span>
             </div>;
             if (i.status === "åtgärdad") return <div key={i.id}>{row}</div>;
             return <SwipeableRow key={i.id} onComplete={()=>{
@@ -1720,20 +1719,22 @@ Uthyrare: [fastighetsbolag]`;
             }}>{row}</SwipeableRow>;
           })}
         </div>
-      </Card>
-      <Card>
-        <h3 style={{ fontSize:15, fontWeight:700, color:G, marginBottom:16 }}>Kontrakt som löper ut</h3>
-        {expiringSoon.length===0?<div style={{ color:"#aaa" }}>Inga inom 120 dagar.</div>:expiringSoon.map(c=>{
-          return <div key={c.key} onClick={()=>openListingModal(c)} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f5f5f5", cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background="#fafafa"} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-            <div><div style={{ fontWeight:600 }}>{c.name}</div><div style={{ fontSize:12, color:"#888" }}>{c.prop} · Lgh {c.unit}</div></div>
-            <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-              {c.newTenantFound&&<Badge label={c.newTenantFrom?<><CheckCircle2 size={14} style={{verticalAlign:"-2px"}}/> Hittad, från {c.newTenantFrom}</>:<><CheckCircle2 size={14} style={{verticalAlign:"-2px"}}/> Hyresgäst hittad</>} color="#16a34a" />}
-              <Badge label={`${c.days} dagar`} color={c.days<30?"#dc2626":"#d97706"} />
-              <span style={{ color:"#d1d5db", fontSize:14 }}>›</span>
-            </div>
-          </div>;
-        })}
-      </Card>
+      </div>
+      <div>
+        <h3 style={{ fontSize:16, fontWeight:800, color:G, marginBottom:12 }}>Kontrakt som löper ut</h3>
+        <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:20, overflow:"hidden" }}>
+          {expiringSoon.length===0?<div style={{ color:"#aaa", padding:20 }}>Inga inom 120 dagar.</div>:expiringSoon.map((c,idx)=>{
+            return <div key={c.key} onClick={()=>openListingModal(c)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 20px", borderTop:idx===0?"none":"1px solid #EAE7DF", cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background="#FAFAF8"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              <div><div style={{ fontWeight:700, fontSize:13.5 }}>{c.name}</div><div style={{ fontSize:11.5, color:"#84887E", marginTop:2 }}>{c.prop} · Lgh {c.unit}</div></div>
+              <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                {c.newTenantFound&&<span style={{ display:"inline-flex", alignItems:"center", borderRadius:999, padding:"3.5px 11px", fontSize:10.5, fontWeight:700, background:"#EEF3EC", color:G }}><CheckCircle2 size={12} style={{verticalAlign:"-2px"}}/> {c.newTenantFrom?`Hittad, från ${c.newTenantFrom}`:"Hittad"}</span>}
+                <span style={{ display:"inline-flex", alignItems:"center", borderRadius:999, padding:"3.5px 11px", fontSize:10.5, fontWeight:700, background:c.days<30?"#FBEEEC":"#FCF0E4", color:c.days<30?"#B03A2E":"#B5651D" }}>{c.days} dagar</span>
+                <span style={{ color:"#84887E" }}>›</span>
+              </div>
+            </div>;
+          })}
+        </div>
+      </div>
     </div>
 
     {/* Quick issue modal - new or edit */}
