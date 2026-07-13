@@ -661,8 +661,8 @@ function DSResponsiveStyles() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
-const G = "#0F3D2E"; // Nordic Craft — permanent identitet (Förslag 2)
-const R = 10; // Nordic Craft radie — mindre, exaktare än tidigare 14
+const G = "#123524"; // Confident Dark Green — permanent grafisk profil (Förslag 3)
+const R = 20; // Förslag 3-radie — rundare, självsäkrare
 const SHADOW = { sm:"0 1px 2px rgba(0,0,0,0.03)", md:"0 4px 14px rgba(0,0,0,0.06)", lg:"0 20px 50px rgba(0,0,0,0.14)" };
 const SPACE = { xs:4, sm:8, md:12, lg:16, xl:24, xxl:32 };
 const btnStyle = bg => ({ background:bg, color:"#fff", border:"none", borderRadius:8, padding:"9px 18px", cursor:"pointer", fontWeight:600, fontSize:14 });
@@ -687,7 +687,7 @@ function daysUntil(d) { if (!d) return null; return Math.ceil((new Date(d)-new D
 
 // ── SHARED COMPONENTS ─────────────────────────────────────────────────────────
 function Badge({ label, color="#888" }) {
-  return <span style={{ background:color+"1a", color, borderRadius:6, padding:"2.5px 8px", fontSize:11, fontWeight:700 }}>{label}</span>;
+  return <span style={{ background:color+"1a", color, borderRadius:999, padding:"3.5px 11px", fontSize:10.5, fontWeight:700 }}>{label}</span>;
 }
 function Card({ children, style, hoverable }) {
   return <div className={hoverable?"rh-hover-lift":""} style={{ background:"#fff", borderRadius:R, border:"1px solid #efefef", padding:24, boxShadow:SHADOW.sm, lineHeight:1.5, ...style }}>{children}</div>;
@@ -711,10 +711,10 @@ function Modal({ title, children, onClose }) {
   </div>;
 }
 function NavRow({ icon, label, active, badge, onClick }) {
-  return <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:9, width:"100%", padding:"9px 16px", margin:"1px 0", background:active?"rgba(111,207,151,0.15)":"none", border:"none", borderLeft:active?"3px solid #6fcf97":"3px solid transparent", color:active?"#6fcf97":"rgba(255,255,255,0.6)", fontSize:18, fontWeight:active?700:400, cursor:"pointer", textAlign:"left" }}>
-    <span style={{ fontSize:15 }}>{icon}</span>
+  return <button onClick={onClick} style={{ display:"flex", alignItems:"center", gap:10, width:"100%", padding:"9px 14px", margin:"1px 0", borderRadius:999, background:active?"#fff":"none", border:"none", color:active?G:"rgba(255,255,255,0.65)", fontSize:14, fontWeight:active?800:600, cursor:"pointer", textAlign:"left" }}>
+    <span style={{ fontSize:15, color:active?G:"rgba(255,255,255,0.5)" }}>{icon}</span>
     <span style={{ flex:1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{label}</span>
-    {badge>0&&<span style={{ background:"#ef4444", color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:11, fontWeight:700 }}>{badge}</span>}
+    {badge>0&&<span style={{ background:active?"#EEF3EC":"rgba(255,255,255,0.14)", color:active?G:"#fff", borderRadius:999, padding:"1px 8px", fontSize:10.5, fontWeight:700 }}>{badge}</span>}
   </button>;
 }
 function Spinner() {
@@ -1652,27 +1652,30 @@ Uthyrare: [fastighetsbolag]`;
       <h2 style={{ fontSize:22, fontWeight:700, color:G }}>{selectedProperty?`Översikt – ${selectedProperty.name}`:"Översikt – Alla fastigheter"}</h2>
     </div>
 
-    {/* Hero-siffra: Nordic Craft-rutnät — ett sammanhängande block med hårfina dividers istället för separata kort */}
+    {/* Hero-siffra: Förslag 3 — stort grönt hero-kort, självständigt mini-rutnät med luft mellan (inte dividers) */}
     {loading ? (
-      <Skeleton height={d?110:220} style={{ borderRadius:R, marginBottom:14 }} />
-    ) : (
-      <div className="rh-hover-lift" style={{ display:"grid", gridTemplateColumns:d?"2fr 1fr 1fr":"1fr", gap:1, background:"#E5E5E3", border:"1px solid #E5E5E3", borderRadius:R, overflow:"hidden", marginBottom:14 }}>
-        <div style={{ background:G, color:"#fff", padding:"18px 20px" }}>
-          <div style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.62)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:6 }}>Hyresintäkt / mån</div>
-          <div style={{ fontSize:d?32:28, fontWeight:800, letterSpacing:"-0.02em", lineHeight:1 }}>{fmt(totalRentMon)}</div>
-          <div style={{ fontSize:11.5, color:"rgba(255,255,255,0.58)", marginTop:8 }}>{fmt(totalRentYear)} / år · {tenants.length} hyresgäster · {properties.length} fastigheter</div>
-        </div>
-        <div style={{ background:"#fff", padding:"18px 20px" }}>
-          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>Hyresgäster</div>
-          <div style={{ fontSize:22, fontWeight:800 }}>{tenants.length}</div>
-          <div style={{ fontSize:11, color:"#bbb", marginTop:4 }}>{properties.length} fastigheter</div>
-        </div>
-        <div style={{ background:"#fff", padding:"18px 20px" }}>
-          <div style={{ fontSize:10.5, color:"#9ca3af", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>Öppna ärenden</div>
-          <div style={{ fontSize:22, fontWeight:800, color:openIssues>0?"#c2660c":"#22c55e" }}>{openIssues}</div>
-          <div style={{ fontSize:11, color:"#bbb", marginTop:4 }}>{openIssues===0?"Inga öppna":"kräver åtgärd"}</div>
-        </div>
+      <div>
+        <Skeleton height={112} style={{ borderRadius:R, marginBottom:12 }} />
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12 }}><Skeleton height={72} style={{ borderRadius:16 }} /><Skeleton height={72} style={{ borderRadius:16 }} /></div>
       </div>
+    ) : (
+      <>
+        <div className="rh-hover-lift" style={{ background:G, color:"#fff", borderRadius:R, padding:"26px 26px 22px", marginBottom:14 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.62)", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:8 }}>Hyresintäkt / mån</div>
+          <div style={{ fontSize:d?44:34, fontWeight:800, letterSpacing:"-0.02em", lineHeight:1 }}>{fmt(totalRentMon)}</div>
+          <div style={{ fontSize:13, color:"rgba(255,255,255,0.58)", marginTop:10 }}>{fmt(totalRentYear)} / år · {tenants.length} hyresgäster · {properties.length} fastigheter</div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12, marginBottom:26 }}>
+          <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"16px 18px" }}>
+            <div style={{ fontSize:11, color:"#84887E", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>Hyresgäster</div>
+            <div style={{ fontSize:19, fontWeight:800 }}>{tenants.length}</div>
+          </div>
+          <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"16px 18px" }}>
+            <div style={{ fontSize:11, color:"#84887E", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}>Öppna ärenden</div>
+            <div style={{ fontSize:19, fontWeight:800, color:openIssues>0?"#B5651D":"#22c55e" }}>{openIssues}</div>
+          </div>
+        </div>
+      </>
     )}
 
     {/* Amortering — samma gröna familj som allt annat, inte längre indigo */}
@@ -1691,22 +1694,22 @@ Uthyrare: [fastighetsbolag]`;
 
     <div style={{ display:"grid", gridTemplateColumns:d?"1fr 1fr":"1fr", gap:20 }}>
       <div>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-          <h3 style={{ fontSize:16, fontWeight:800, color:G }}>Senaste felanmälningar</h3>
-          <button onClick={openIssueForm} title="Ny felanmälan" style={{ width:32, height:32, borderRadius:"50%", background:G, color:"#fff", border:"none", cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 2px 6px rgba(15,61,46,0.3)", lineHeight:1 }}>+</button>
-        </div>
-        <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:20, overflow:"hidden" }}>
+        <div style={{ background:"#fff", border:"1px solid #E7E5E0", borderRadius:10, overflow:"hidden" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", borderBottom:"1px solid #E7E5E0" }}>
+            <h3 style={{ fontSize:13, fontWeight:700, margin:0, color:"#0F1512" }}>Senaste felanmälningar</h3>
+            <button onClick={openIssueForm} title="Ny felanmälan" style={{ width:26, height:26, borderRadius:8, background:G, color:"#fff", border:"none", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>+</button>
+          </div>
           {recent.length===0?<div style={{ color:"#aaa", padding:20 }}>Inga ärenden.</div>:recent.map((i,idx)=>{
             const prop=properties.find(p=>p.id===i.property_id);
-            const pillColor = i.status==="ny"?{bg:"#FBEEEC",fg:"#B03A2E"}:i.status==="pågående"?{bg:"#FCF0E4",fg:"#B5651D"}:{bg:"#EEF3EC",fg:G};
-            const row = <div onClick={()=>openEditIssue(i)} style={{ display:"flex", alignItems:"center", gap:13, padding:"14px 20px", borderTop:idx===0?"none":"1px solid #EAE7DF", cursor:"pointer", background:"#fff" }} onMouseEnter={e=>e.currentTarget.style.background="#FAFAF8"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+            const dotColor = i.status==="ny"?"#B3261E":i.status==="pågående"?"#9A5B0A":G;
+            const row = <div onClick={()=>openEditIssue(i)} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 16px", borderBottom:idx===recent.length-1?"none":"1px solid #E7E5E0", cursor:"pointer" }}>
+              <span style={{ width:7, height:7, borderRadius:"50%", background:dotColor, flexShrink:0 }} />
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontWeight:700, fontSize:13.5 }}>{i.title}</div>
-                <div style={{ fontSize:11.5, color:"#84887E", marginTop:2 }}>{prop?.name}{i.unit&&` · Lgh ${i.unit}`} · {i.reported}</div>
-                {(i.files||[]).length>0&&<div style={{ fontSize:11,color:"#6366f1",marginTop:4 }}><Paperclip size={12} style={{verticalAlign:"-2px"}}/> {i.files.length} fil{i.files.length>1?"er":""}</div>}
+                <div style={{ fontWeight:600, fontSize:12.5 }}>{i.title}</div>
+                <div style={{ fontSize:11, color:"#8A8A85", marginTop:1 }}>{prop?.name}{i.unit&&` · Lgh ${i.unit}`} · {i.reported}</div>
               </div>
-              <span style={{ display:"inline-flex", alignItems:"center", borderRadius:999, padding:"3.5px 11px", fontSize:10.5, fontWeight:700, background:pillColor.bg, color:pillColor.fg, flexShrink:0 }}>{i.status}</span>
-              <span style={{ color:"#84887E", flexShrink:0 }}>›</span>
+              <span style={{ display:"inline-block", background:dotColor+"1a", color:dotColor, borderRadius:6, padding:"2.5px 8px", fontSize:10.5, fontWeight:700 }}>{i.status}</span>
+              {(i.files||[]).length>0&&<span style={{ fontSize:11,color:"#6366f1" }}><Paperclip size={12} style={{verticalAlign:"-2px"}}/> {i.files.length}</span>}
             </div>;
             if (i.status === "åtgärdad") return <div key={i.id}>{row}</div>;
             return <SwipeableRow key={i.id} onComplete={()=>{
@@ -1721,20 +1724,23 @@ Uthyrare: [fastighetsbolag]`;
         </div>
       </div>
       <div>
-        <h3 style={{ fontSize:16, fontWeight:800, color:G, marginBottom:12 }}>Kontrakt som löper ut</h3>
-        <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:20, overflow:"hidden" }}>
+        <div style={{ background:"#fff", border:"1px solid #E7E5E0", borderRadius:10, overflow:"hidden" }}>
+          <div style={{ padding:"12px 16px", borderBottom:"1px solid #E7E5E0" }}>
+            <h3 style={{ fontSize:13, fontWeight:700, margin:0, color:"#0F1512" }}>Kontrakt som löper ut</h3>
+          </div>
           {expiringSoon.length===0?<div style={{ color:"#aaa", padding:20 }}>Inga inom 120 dagar.</div>:expiringSoon.map((c,idx)=>{
-            return <div key={c.key} onClick={()=>openListingModal(c)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 20px", borderTop:idx===0?"none":"1px solid #EAE7DF", cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background="#FAFAF8"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-              <div><div style={{ fontWeight:700, fontSize:13.5 }}>{c.name}</div><div style={{ fontSize:11.5, color:"#84887E", marginTop:2 }}>{c.prop} · Lgh {c.unit}</div></div>
+            return <div key={c.key} onClick={()=>openListingModal(c)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"11px 16px", borderBottom:idx===expiringSoon.length-1?"none":"1px solid #E7E5E0", cursor:"pointer" }}>
+              <div><div style={{ fontWeight:600, fontSize:12.5 }}>{c.name}</div><div style={{ fontSize:11, color:"#8A8A85", marginTop:1 }}>{c.prop} · Lgh {c.unit}</div></div>
               <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                {c.newTenantFound&&<span style={{ display:"inline-flex", alignItems:"center", borderRadius:999, padding:"3.5px 11px", fontSize:10.5, fontWeight:700, background:"#EEF3EC", color:G }}><CheckCircle2 size={12} style={{verticalAlign:"-2px"}}/> {c.newTenantFrom?`Hittad, från ${c.newTenantFrom}`:"Hittad"}</span>}
-                <span style={{ display:"inline-flex", alignItems:"center", borderRadius:999, padding:"3.5px 11px", fontSize:10.5, fontWeight:700, background:c.days<30?"#FBEEEC":"#FCF0E4", color:c.days<30?"#B03A2E":"#B5651D" }}>{c.days} dagar</span>
-                <span style={{ color:"#84887E" }}>›</span>
+                {c.newTenantFound&&<span style={{ display:"inline-flex", alignItems:"center", background:G+"1a", color:G, borderRadius:6, padding:"2.5px 8px", fontSize:10.5, fontWeight:700 }}><CheckCircle2 size={12} style={{verticalAlign:"-2px"}}/>&nbsp;{c.newTenantFrom?`Hittad, från ${c.newTenantFrom}`:"Hittad"}</span>}
+                <span style={{ display:"inline-block", background:(c.days<30?"#B3261E":"#9A5B0A")+"1a", color:c.days<30?"#B3261E":"#9A5B0A", borderRadius:6, padding:"2.5px 8px", fontSize:10.5, fontWeight:700 }}>{c.days} dagar</span>
+                <span style={{ color:"#8A8A85" }}>›</span>
               </div>
             </div>;
           })}
         </div>
       </div>
+
     </div>
 
     {/* Quick issue modal - new or edit */}
