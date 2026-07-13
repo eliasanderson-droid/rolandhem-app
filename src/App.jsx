@@ -862,7 +862,7 @@ function SwipeableRow({ children, onComplete, actionLabel=<><Check size={14} sty
       ref.current.style.transform = "translateX(0)";
     }
   }
-  return <div style={{ position:"relative", borderRadius:R, overflow:"hidden" }}>
+  return <div style={{ position:"relative", overflow:"hidden" }}>
     <div style={{ position:"absolute", inset:0, background:actionColor, color:"#fff", display:"flex", alignItems:"center", justifyContent:"flex-end", padding:"0 20px", fontWeight:700, fontSize:13 }}>{actionLabel}</div>
     <div
       ref={ref}
@@ -1701,8 +1701,8 @@ Uthyrare: [fastighetsbolag]`;
           </div>
           {recent.length===0?<div style={{ color:"#aaa", padding:20 }}>Inga ärenden.</div>:recent.map((i,idx)=>{
             const prop=properties.find(p=>p.id===i.property_id);
-            const dotColor = i.status==="ny"?"#B3261E":i.status==="pågående"?"#9A5B0A":G;
-            const row = <div onClick={()=>openEditIssue(i)} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 16px", borderBottom:idx===recent.length-1?"none":"1px solid #E7E5E0", cursor:"pointer" }}>
+            const dotColor = i.status==="ny"?"#B3261E":i.status==="pågående"?"#9A5B0A":"#16A34A";
+            const row = <div onClick={()=>openEditIssue(i)} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 16px", borderBottom:idx===recent.length-1?"none":"1px solid #E7E5E0", cursor:"pointer", background:"#fff" }}>
               <span style={{ width:7, height:7, borderRadius:"50%", background:dotColor, flexShrink:0 }} />
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontWeight:600, fontSize:12.5 }}>{i.title}</div>
