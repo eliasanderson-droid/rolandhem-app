@@ -739,7 +739,7 @@ function GlobalMicroStyles() {
   return <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
     body { font-variant-numeric: tabular-nums; }
-    .rh-display { font-family:'Fraunces', Georgia, serif; font-optical-sizing:auto; }
+    .rh-display { font-family:'Fraunces', Georgia, serif; font-optical-sizing:none; font-variation-settings:'opsz' 60; }
     button:not(:disabled) { transition: transform .1s ease, filter .12s ease, box-shadow .15s ease; }
     button:not(:disabled):hover { filter: brightness(1.05); }
     button:not(:disabled):active { transform: scale(0.96); }
