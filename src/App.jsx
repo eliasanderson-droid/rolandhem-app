@@ -1508,7 +1508,6 @@ function GlobalHero({ properties, tenants, totalRentMon, totalRentYear, openIssu
         <span>{fmt(totalRentYear)} / år</span>
         <span>·&nbsp; {tenants.length} hyresgäster</span>
         <span>·&nbsp; {properties.length} fastigheter</span>
-        <span style={{ color: openIssues>0 ? "#f0b884" : "rgba(255,255,255,0.72)" }}>·&nbsp; {openIssues} öppna ärenden</span>
       </div>
     </div>
   </div>;
@@ -1540,8 +1539,8 @@ function PropertyShowcaseCard({ p, tenants, issues, onSelect }) {
 
 function PropertyShowcase({ properties, tenants, issues, onSelect, d }) {
   if (properties.length===0) return null;
-  return <div style={{ marginBottom:28 }}>
-    <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:12 }}>
+  return <div style={{ marginTop:22, marginBottom:28 }}>
+    <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:14 }}>
       <h3 className="rh-display" style={{ fontSize:17, fontWeight:600, color:"#0F1512", margin:0 }}>Dina fastigheter</h3>
       <span style={{ fontSize:11.5, color:"#9ca3af" }}>{properties.length} st</span>
     </div>
@@ -1556,8 +1555,6 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
 
   const d = useIsDesktop();
   const [proformas, setProformas] = useState([]);
-  const [styrranta, setStyrranta] = useState(null);
-  const [styrrantaError, setStyrrantaError] = useState(false);
   const [showIssueForm, setShowIssueForm] = useState(false);
   const [issueForm, setIssueForm] = useState(null);
   const [propTenants, setPropTenants] = useState([]);
@@ -1600,16 +1597,6 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
 
   useEffect(() => {
     sb.from("proformas").select("property_id,data").then(({ data }) => setProformas(data||[]));
-  }, []);
-
-  // Styrränta — via egen Vercel-proxy (/api/styrranta) för att undvika CORS-block i webbläsaren.
-  useEffect(() => {
-    fetch("/api/styrranta")
-      .then(r => r.json())
-      .then(rate => {
-        if (rate && !rate.error) setStyrranta(rate); else setStyrrantaError(true);
-      })
-      .catch(() => setStyrrantaError(true));
   }, []);
 
   function downloadIssueFromDash(issue) {
@@ -1738,10 +1725,6 @@ Uthyrare: [fastighetsbolag]`;
       </div>
     </div>}
 
-    {selectedProperty&&<div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-      <h2 style={{ fontSize:22, fontWeight:700, color:G }}>{`Översikt – ${selectedProperty.name}`}</h2>
-    </div>}
-
     {/* Hero-siffra: property-vy behåller grönt hero-kort. Global vy: premiumhero med foto­kollage + Fraunces-typografi. */}
     {loading ? (
       <div>
@@ -1781,25 +1764,6 @@ Uthyrare: [fastighetsbolag]`;
         </div>
       </>
     )}
-
-
-    {/* Styrränta — live från Riksbankens öppna API, relevant inför Amortering nedan */}
-    <Card hoverable style={{ padding:"10px 14px", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
-      <div>
-        <div style={{ fontSize:10, color:"#84887E", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4 }}>Styrränta (Riksbanken)</div>
-        {styrranta ? (
-          <>
-            <div style={{ fontSize:17, fontWeight:800, color:G }}>{Number(styrranta.value).toFixed(2).replace(".", ",")}%</div>
-            <div style={{ fontSize:10, color:"#9ca3af", marginTop:2 }}>Gäller från {new Date(styrranta.date).toLocaleDateString("sv-SE")} · Källa: Riksbanken</div>
-          </>
-        ) : styrrantaError ? (
-          <div style={{ fontSize:11, color:"#aaa" }}>Kunde inte hämta styrräntan just nu</div>
-        ) : (
-          <Skeleton width={60} height={17} />
-        )}
-      </div>
-      <TrendingUp size={17} color={BRASS} style={{ flexShrink:0 }} />
-    </Card>
 
     {/* Amortering — samma gröna familj som allt annat, inte längre indigo */}
     <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:8, marginBottom:16 }}>
@@ -3566,6 +3530,7 @@ export default function App() {
   const [editingPropertyId, setEditingPropertyId] = useState(null);
   const [editPropertyForm, setEditPropertyForm] = useState({});
   const [globalLoading, setGlobalLoading] = useState(true);
+  const [styrranta, setStyrranta] = useState(null);
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const isDesktop = useIsDesktop();
   const SIDEBAR_W = 240;
@@ -3620,6 +3585,14 @@ export default function App() {
       .subscribe();
     return () => sb.removeChannel(channel);
   }, [session]);
+
+  // Styrränta — via egen Vercel-proxy (/api/styrranta), hämtas en gång och visas i sidomenyns fot överallt i appen.
+  useEffect(() => {
+    fetch("/api/styrranta")
+      .then(r => r.json())
+      .then(rate => { if (rate && !rate.error) setStyrranta(rate); })
+      .catch(() => {});
+  }, []);
 
   const selectedProperty = nav.type==="property" ? properties.find(p=>p.id===nav.propertyId)||null : null;
   const filteredTenants = selectedProperty ? allTenants.filter(t=>t.property_id===selectedProperty.id) : allTenants;
@@ -3705,6 +3678,14 @@ export default function App() {
         })}
         <button onClick={()=>setShowAddProp(true)} style={{ display:"flex",alignItems:"center",gap:8,width:"calc(100% - 32px)",margin:"8px 16px 0",padding:"7px 10px",borderRadius:8,background:"none",border:"1px dashed rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.3)",cursor:"pointer",fontSize:12 }}>＋ Lägg till fastighet</button>
       </nav>
+      {styrranta&&<div style={{ margin:"0 16px 12px", padding:"9px 12px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
+        <div>
+          <div style={{ fontSize:9.5, color:"rgba(255,255,255,0.4)", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:2 }}>Styrränta</div>
+          <div style={{ fontSize:15, fontWeight:800, color:"#fff" }}>{Number(styrranta.value).toFixed(2).replace(".", ",")}%</div>
+          {styrranta.nextDecision&&<div style={{ fontSize:9.5, color:"rgba(255,255,255,0.4)", marginTop:2 }}>Nästa besked {styrranta.nextDecision}</div>}
+        </div>
+        <TrendingUp size={15} color={BRASS} style={{ flexShrink:0 }} />
+      </div>}
       <div style={{ padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.08)",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
         <div style={{ fontSize:11,color:"rgba(255,255,255,0.22)" }}>{properties.length} fastigheter</div>
         <button onClick={()=>sb.auth.signOut()} style={{ background:"none",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.4)",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11 }}>Logga ut</button>
@@ -3727,6 +3708,11 @@ export default function App() {
         </button>
       </div>
       <div style={{ padding:isDesktop?"28px 32px":"16px",flex:1 }}>
+        {nav.type==="property"&&nav.tab!=="overview"&&selectedProperty&&<div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:18, paddingBottom:12, borderBottom:"1px solid #EAE7DF" }}>
+          <Building2 size={15} color={G} style={{ flexShrink:0 }} />
+          <span style={{ fontWeight:700, fontSize:14, color:G }}>{selectedProperty.name}</span>
+          {selectedProperty.address&&<span style={{ fontSize:13, color:"#9ca3af" }}>· {selectedProperty.address}</span>}
+        </div>}
         {nav.type==="overview"&&<Dashboard tenants={allTenants} contracts={allContracts} issues={allIssues} properties={properties} selectedProperty={null} onIssueAdded={loadGlobal} loading={globalLoading} onOpenSearch={()=>setCmdkOpen(true)} onSelectProperty={goToProperty} />}
         {nav.type==="search"&&<GlobalSearch properties={properties} onNavigate={(tab,propId)=>{ setNav({type:"property",propertyId:propId,tab}); }} />}
         {nav.type==="contacts"&&<Contacts />}
