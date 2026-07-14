@@ -1795,8 +1795,8 @@ Uthyrare: [fastighetsbolag]`;
                 <div style={{ fontWeight:600, fontSize:12.5 }}>{i.title}</div>
                 <div style={{ fontSize:11, color:"#8A8A85", marginTop:1 }}>{prop?.name}{i.unit&&` · Lgh ${i.unit}`} · {i.reported}</div>
               </div>
-              <span style={{ display:"inline-block", background:dotColor+"1a", color:dotColor, borderRadius:6, padding:"2.5px 8px", fontSize:10.5, fontWeight:700 }}>{i.status}</span>
               {(i.files||[]).length>0&&<span style={{ fontSize:11,color:"#6366f1" }}><Paperclip size={12} style={{verticalAlign:"-2px"}}/> {i.files.length}</span>}
+              <span style={{ display:"inline-block", background:dotColor+"1a", color:dotColor, borderRadius:6, padding:"2.5px 8px", fontSize:10.5, fontWeight:700 }}>{i.status}</span>
             </div>;
             if (i.status === "åtgärdad") return <div key={i.id}>{row}</div>;
             return <SwipeableRow key={i.id} onComplete={()=>{
