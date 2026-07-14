@@ -1755,12 +1755,12 @@ Uthyrare: [fastighetsbolag]`;
           <div style={{ fontSize:d?44:34, fontWeight:800, letterSpacing:"-0.02em", lineHeight:1 }}>{fmt(totalRentMon)}</div>
           <div style={{ fontSize:13, color:"rgba(255,255,255,0.58)", marginTop:10 }}>{fmt(totalRentYear)} / år · {tenants.length} hyresgäster · {properties.length} fastigheter</div>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12, marginBottom:26 }}>
-          <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"16px 18px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:8, marginBottom:12 }}>
+          <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"12px 14px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, color:"#84887E", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}><Contact size={12}/> Hyresgäster</div>
             <div style={{ fontSize:19, fontWeight:800 }}>{tenants.length}</div>
           </div>
-          <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"16px 18px" }}>
+          <div style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"12px 14px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, color:"#84887E", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}><Wrench size={12}/> Öppna ärenden</div>
             <div style={{ fontSize:19, fontWeight:800, color:openIssues>0?"#B5651D":"#22c55e" }}>{openIssues}</div>
           </div>
@@ -1769,12 +1769,12 @@ Uthyrare: [fastighetsbolag]`;
     ) : (
       <>
         <GlobalHero properties={properties} tenants={tenants} totalRentMon={totalRentMon} totalRentYear={totalRentYear} openIssues={openIssues} d={d} />
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12, marginBottom:26 }}>
-          <div className="rh-hover-lift" style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"16px 18px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:8, marginBottom:10 }}>
+          <div className="rh-hover-lift" style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"12px 14px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, color:"#84887E", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}><Contact size={12}/> Hyresgäster</div>
             <div style={{ fontSize:19, fontWeight:800 }}>{tenants.length}</div>
           </div>
-          <div className="rh-hover-lift" style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"16px 18px" }}>
+          <div className="rh-hover-lift" style={{ background:"#fff", border:"1px solid #EAE7DF", borderRadius:16, padding:"12px 14px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, color:"#84887E", fontWeight:700, textTransform:"uppercase", marginBottom:6 }}><Wrench size={12}/> Öppna ärenden</div>
             <div style={{ fontSize:19, fontWeight:800, color:openIssues>0?"#B5651D":"#22c55e" }}>{openIssues}</div>
           </div>
@@ -1784,31 +1784,31 @@ Uthyrare: [fastighetsbolag]`;
 
 
     {/* Styrränta — live från Riksbankens öppna API, relevant inför Amortering nedan */}
-    <Card hoverable style={{ padding:"16px 20px", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between", gap:16 }}>
+    <Card hoverable style={{ padding:"10px 14px", marginBottom:10, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
       <div>
-        <div style={{ fontSize:11, color:"#84887E", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:6 }}>Styrränta (Riksbanken)</div>
+        <div style={{ fontSize:10, color:"#84887E", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4 }}>Styrränta (Riksbanken)</div>
         {styrranta ? (
           <>
-            <div style={{ fontSize:22, fontWeight:800, color:G }}>{Number(styrranta.value).toFixed(2).replace(".", ",")}%</div>
-            <div style={{ fontSize:11, color:"#9ca3af", marginTop:3 }}>Gäller från {new Date(styrranta.date).toLocaleDateString("sv-SE")} · Källa: Riksbanken</div>
+            <div style={{ fontSize:17, fontWeight:800, color:G }}>{Number(styrranta.value).toFixed(2).replace(".", ",")}%</div>
+            <div style={{ fontSize:10, color:"#9ca3af", marginTop:2 }}>Gäller från {new Date(styrranta.date).toLocaleDateString("sv-SE")} · Källa: Riksbanken</div>
           </>
         ) : styrrantaError ? (
-          <div style={{ fontSize:12, color:"#aaa" }}>Kunde inte hämta styrräntan just nu</div>
+          <div style={{ fontSize:11, color:"#aaa" }}>Kunde inte hämta styrräntan just nu</div>
         ) : (
-          <Skeleton width={70} height={22} />
+          <Skeleton width={60} height={17} />
         )}
       </div>
-      <TrendingUp size={22} color={BRASS} style={{ flexShrink:0 }} />
+      <TrendingUp size={17} color={BRASS} style={{ flexShrink:0 }} />
     </Card>
 
     {/* Amortering — samma gröna familj som allt annat, inte längre indigo */}
-    <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:14, marginBottom:24 }}>
-      <Card style={{ padding:"14px 18px", background:"#f0faf4", border:"1px solid #a7f3d0" }}>
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:8, marginBottom:16 }}>
+      <Card style={{ padding:"11px 14px", background:"#f0faf4", border:"1px solid #a7f3d0" }}>
         <div style={{ fontSize:12, color:G, fontWeight:600, marginBottom:4 }}>AMORTERING / MÅN</div>
         <div style={{ fontSize:20, fontWeight:800, color:G }}>{fmt(totalAmorteringMon)}</div>
         <div style={{ fontSize:11, color:"#5a8a72", marginTop:2 }}>baserat på proforma</div>
       </Card>
-      <Card style={{ padding:"14px 18px", background:"#f0faf4", border:"1px solid #a7f3d0" }}>
+      <Card style={{ padding:"11px 14px", background:"#f0faf4", border:"1px solid #a7f3d0" }}>
         <div style={{ fontSize:12, color:G, fontWeight:600, marginBottom:4 }}>AMORTERING / ÅR</div>
         <div style={{ fontSize:20, fontWeight:800, color:G }}>{fmt(totalAmorteringYear)}</div>
         <div style={{ fontSize:11, color:"#5a8a72", marginTop:2 }}>baserat på proforma</div>
