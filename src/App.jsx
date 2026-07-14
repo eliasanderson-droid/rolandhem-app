@@ -1519,7 +1519,7 @@ function PropertyShowcaseCard({ p, tenants, issues, onSelect }) {
   const tCount = tenants.filter(t=>t.property_id===p.id).length;
   const open = issues.filter(i=>i.property_id===p.id && i.status!=="åtgärdad").length;
   return <div onClick={()=>onSelect&&onSelect(p.id)} onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)}
-    style={{ cursor:onSelect?"pointer":"default", borderRadius:16, overflow:"hidden", background:"#fff", border:"1px solid #EAE7DF", boxShadow: hover?"0 14px 30px rgba(0,0,0,0.12)":"0 1px 2px rgba(0,0,0,0.03)", transform: hover?"translateY(-3px)":"translateY(0)", transition:"transform .18s cubic-bezier(.4,0,.2,1), box-shadow .18s ease", flexShrink:0, width:230 }}>
+    style={{ cursor:onSelect?"pointer":"default", borderRadius:16, overflow:"hidden", background:"#fff", border:"1px solid #EAE7DF", boxShadow: hover?"0 14px 30px rgba(0,0,0,0.12)":"0 1px 2px rgba(0,0,0,0.03)", transform: hover?"translateY(-3px)":"translateY(0)", transition:"transform .18s cubic-bezier(.4,0,.2,1), box-shadow .18s ease" }}>
     <div style={{ position:"relative", height:120, background: p.cover_image_url?"#0B2118":`linear-gradient(135deg,#1c4432,${G})` }}>
       {p.cover_image_url ? <img src={p.cover_image_url} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center" }}><Home size={26} color="rgba(255,255,255,0.3)" /></div>}
       <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.55), transparent 60%)" }} />
@@ -1538,14 +1538,14 @@ function PropertyShowcaseCard({ p, tenants, issues, onSelect }) {
   </div>;
 }
 
-function PropertyShowcase({ properties, tenants, issues, onSelect }) {
+function PropertyShowcase({ properties, tenants, issues, onSelect, d }) {
   if (properties.length===0) return null;
   return <div style={{ marginBottom:28 }}>
     <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:12 }}>
       <h3 className="rh-display" style={{ fontSize:17, fontWeight:600, color:"#0F1512", margin:0 }}>Dina fastigheter</h3>
       <span style={{ fontSize:11.5, color:"#9ca3af" }}>{properties.length} st</span>
     </div>
-    <div style={{ display:"flex", gap:14, overflowX:"auto", paddingBottom:6, WebkitOverflowScrolling:"touch" }}>
+    <div style={{ display:"grid", gridTemplateColumns: d ? "repeat(auto-fill, minmax(210px, 1fr))" : "repeat(2, 1fr)", gap:14 }}>
       {properties.map(p => <PropertyShowcaseCard key={p.id} p={p} tenants={tenants} issues={issues} onSelect={onSelect} />)}
     </div>
   </div>;
@@ -1602,13 +1602,12 @@ function Dashboard({ tenants, contracts, issues, properties, selectedProperty, o
     sb.from("proformas").select("property_id,data").then(({ data }) => setProformas(data||[]));
   }, []);
 
-  // Styrränta — Riksbankens öppna API, ByGroup-anropet kräver ingen nyckel.
+  // Styrränta — via egen Vercel-proxy (/api/styrranta) för att undvika CORS-block i webbläsaren.
   useEffect(() => {
-    fetch("https://api.riksbank.se/swea/v1/Observations/Latest/ByGroup/2")
+    fetch("/api/styrranta")
       .then(r => r.json())
-      .then(list => {
-        const rate = (list||[]).find(x => x.seriesId === "SECBREPOEFF");
-        if (rate) setStyrranta(rate); else setStyrrantaError(true);
+      .then(rate => {
+        if (rate && !rate.error) setStyrranta(rate); else setStyrrantaError(true);
       })
       .catch(() => setStyrrantaError(true));
   }, []);
@@ -1780,7 +1779,6 @@ Uthyrare: [fastighetsbolag]`;
             <div style={{ fontSize:19, fontWeight:800, color:openIssues>0?"#B5651D":"#22c55e" }}>{openIssues}</div>
           </div>
         </div>
-        <PropertyShowcase properties={properties} tenants={tenants} issues={issues} onSelect={onSelectProperty} />
       </>
     )}
 
@@ -1867,6 +1865,8 @@ Uthyrare: [fastighetsbolag]`;
       </div>
 
     </div>
+
+    {!selectedProperty && <PropertyShowcase properties={properties} tenants={tenants} issues={issues} onSelect={onSelectProperty} d={d} />}
 
     {/* Quick issue modal - new or edit */}
     {(showIssueForm||issueForm?._editing)&&issueForm&&<Modal title={issueForm._editing?<><Pencil size={14} style={{verticalAlign:"-2px"}}/> Redigera felanmälan</>:<><Wrench size={14} style={{verticalAlign:"-2px"}}/> Ny felanmälan</>} onClose={()=>{ setShowIssueForm(false); setIssueForm(null); }}>
