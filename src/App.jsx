@@ -3635,15 +3635,14 @@ export default function App() {
   return <div style={{ display:"flex", minHeight:"100vh", background:"#f4f5f7", fontFamily:"'Inter',system-ui,sans-serif", overflow:"hidden" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
     {sidebarOpen&&!isDesktop&&<div onClick={()=>setSidebarOpen(false)} style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:40 }} />}
     <aside style={{ width:SIDEBAR_W, background:G, display:"flex", flexDirection:"column", padding:"28px 0", flexShrink:0, ...(isDesktop?{ position:"relative",transform:"none",zIndex:1 }:{ position:"fixed",top:0,left:0,bottom:0,zIndex:50,transform:sidebarOpen?"translateX(0)":`translateX(-${SIDEBAR_W}px)`,transition:"transform 0.25s cubic-bezier(0.4,0,0.2,1)",boxShadow:sidebarOpen?"4px 0 24px rgba(0,0,0,0.3)":"none" }) }}>
-      {!isDesktop&&<div style={{ padding:"20px 16px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+      <div style={{ padding:"20px 16px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
           <img src={LOGO_WHITE} alt="Rolandhem Fastigheter AB" style={{ height:44, width:"auto", objectFit:"contain", display:"block" }} />
         </div>
-        <button onClick={()=>setSidebarOpen(false)} style={{ background:"rgba(255,255,255,0.07)",border:"none",color:"rgba(255,255,255,0.5)",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><X size={14} style={{verticalAlign:"-2px"}}/></button>
-      </div>}
+        {!isDesktop&&<button onClick={()=>setSidebarOpen(false)} style={{ background:"rgba(255,255,255,0.07)",border:"none",color:"rgba(255,255,255,0.5)",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}><X size={14} style={{verticalAlign:"-2px"}}/></button>}
+      </div>
       <nav style={{ flex:1, padding:"14px 0", overflowY:"auto" }}>
         <NavRow icon={<Building2 size={14} style={{verticalAlign:"-2px"}}/>} label="Översikt" active={nav.type==="overview"} onClick={goOverview} />
-        <NavRow icon={<Search size={14} style={{verticalAlign:"-2px"}}/>} label="Sök" active={nav.type==="search"} onClick={goSearch} />
         <NavRow icon={<Contact size={14} style={{verticalAlign:"-2px"}}/>} label="Kontakter" active={nav.type==="contacts"} onClick={goContacts} />
         <div style={{ margin:"10px 16px 6px", fontSize:10, fontWeight:700, color:"rgba(255,255,255,0.25)", textTransform:"uppercase", letterSpacing:"0.1em" }}>Fastigheter</div>
         {properties.map(p=>{
@@ -3698,9 +3697,7 @@ export default function App() {
           <span style={{ display:"block",width:20,height:2,background:G,borderRadius:2 }} />
           <span style={{ display:"block",width:20,height:2,background:G,borderRadius:2 }} />
         </button>
-        <div style={{ display:"flex",alignItems:"center",gap:10,flex:1 }}>
-          <img src={LOGO} alt="Rolandhem Fastigheter AB" style={{ height:32,width:"auto",objectFit:"contain",flexShrink:0 }} />
-        </div>
+        <div style={{ flex:1 }} />
         <button className="rh-btn-press" onClick={()=>setCmdkOpen(true)} style={{ display:"flex",alignItems:"center",gap:8,background:"#f7f8f6",border:"1px solid #e8e8e8",borderRadius:10,padding:"8px 12px",color:"#888",fontSize:13,cursor:"pointer",flexShrink:0 }}>
           <Search size={14} />
           <span style={{ display:isDesktop?"inline":"none" }}>Sök</span>
