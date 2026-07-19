@@ -3657,7 +3657,8 @@ export default function App() {
   }, []);
 
   async function savePropertyReminder(propertyId, patch) {
-    const current = notifSettings[propertyId] || { invoice_reminder_day:20, invoice_reminder_frequency:1 };
+    const defaultDate = new Date(Date.now()+20*86400000).toISOString().slice(0,10);
+    const current = notifSettings[propertyId] || { next_reminder_date:defaultDate, invoice_reminder_frequency:1 };
     const next = { ...current, ...patch, property_id:propertyId };
     setNotifSettings(prev => ({ ...prev, [propertyId]: next }));
     await sb.from("property_notification_settings").upsert(next, { onConflict:"property_id" });
@@ -3830,13 +3831,11 @@ export default function App() {
         {nav.type==="property"&&nav.tab==="invoices"&&selectedProperty&&<div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:16, marginBottom:20, padding:"12px 16px", background:"#f7f8f6", border:"1px solid #EAE7DF", borderRadius:12, fontSize:12.5 }}>
           <span style={{ fontWeight:700, color:"#555" }}>🔔 Påminnelse om avier</span>
           <label style={{ display:"flex", alignItems:"center", gap:6, color:"#555" }}>
-            Dag i månaden
-            <select value={notifSettings[selectedProperty.id]?.invoice_reminder_day ?? 20} onChange={e=>savePropertyReminder(selectedProperty.id,{invoice_reminder_day:Number(e.target.value)})} style={{ border:"1px solid #ddd", borderRadius:6, padding:"3px 6px", fontSize:12.5 }}>
-              {Array.from({length:28},(_,i)=>i+1).map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
+            Nästa påminnelse
+            <input type="date" value={notifSettings[selectedProperty.id]?.next_reminder_date ?? ""} onChange={e=>savePropertyReminder(selectedProperty.id,{next_reminder_date:e.target.value})} style={{ border:"1px solid #ddd", borderRadius:6, padding:"3px 6px", fontSize:12.5 }} />
           </label>
           <label style={{ display:"flex", alignItems:"center", gap:6, color:"#555" }}>
-            Frekvens
+            Upprepa
             <select value={notifSettings[selectedProperty.id]?.invoice_reminder_frequency ?? 1} onChange={e=>savePropertyReminder(selectedProperty.id,{invoice_reminder_frequency:Number(e.target.value)})} style={{ border:"1px solid #ddd", borderRadius:6, padding:"3px 6px", fontSize:12.5 }}>
               <option value={1}>Varje månad</option>
               <option value={2}>Varannan månad</option>
