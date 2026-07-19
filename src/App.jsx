@@ -664,6 +664,24 @@ function DSResponsiveStyles() {
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const G = "#123524"; // Confident Dark Green — permanent grafisk profil (Förslag 3)
+
+// Skickar push-notis om en ny felanmälan direkt från klienten (istället för Supabase
+// Database Webhooks, som numera kräver betald Supabase-nivå). Anropas efter varje
+// lyckad "issues"-insert. Misslyckas den (t.ex. ingen nätanslutning) struntar vi i det
+// tyst — felanmälan är redan sparad, notisen är bara en bonus.
+function notifyNewIssue(item) {
+  fetch("/api/notify-new-issue", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      record: {
+        property_id: item.property_id,
+        title: item.title,
+        description: item.description,
+      },
+    }),
+  }).catch(() => {});
+}
 const BRASS = "#B08D57"; // Varm mässingsaccent — premiumdetalj, används sparsamt
 const CREAM = "#F7F2E7"; // Varm cream — Nordic Craft-ton
 const R = 20; // Förslag 3-radie — rundare, självsäkrare
@@ -1683,6 +1701,7 @@ Uthyrare: [fastighetsbolag]`;
     } else {
       const { image_url, ...item } = issueForm;
       await sb.from("issues").insert([{...item,files:issueForm.files||[]}]);
+      notifyNewIssue(item);
     }
     setSaving(false); setShowIssueForm(false); setIssueForm(null);
     toast(editing ? "Felanmälan uppdaterad" : "Felanmälan sparad");
@@ -2302,7 +2321,7 @@ function TenantIssues({ tenant }) {
     const { image_url:_old, ...rest } = form;
     const item = {...rest, property_id:tenant.property_id, unit:tenant.unit, files:form.files||[]};
     if (form.id) await sb.from("issues").update(item).eq("id", form.id);
-    else await sb.from("issues").insert([item]);
+    else { await sb.from("issues").insert([item]); notifyNewIssue(item); }
     setForm(null); load();
   }
   async function remove(id) { if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return; await sb.from("issues").delete().eq("id", id); load(); }
@@ -2498,7 +2517,7 @@ function Maintenance({ propertyId, properties }) {
     const { image_url:_oldm, ...restm } = form;
     const item = {...restm, property_id:propertyId, files:form.files||[]};
     if (form.id) await sb.from("issues").update(item).eq("id", form.id);
-    else await sb.from("issues").insert([item]);
+    else { await sb.from("issues").insert([item]); notifyNewIssue(item); }
     setForm(null); load();
   }
   async function remove(id) { if (!(await confirmDialog("Detta går inte att ångra. Är du säker på att du vill ta bort posten?"))) return; await sb.from("issues").delete().eq("id", id); load(); }
