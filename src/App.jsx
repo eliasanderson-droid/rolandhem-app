@@ -3418,6 +3418,7 @@ const SUBTABS = [
   { id:"planned", label:"Planerat underhåll", icon:<HardHat size={14} style={{verticalAlign:"-2px"}}/> },
   { id:"rentlog", label:"Hyreshöjningar", icon:<TrendingUp size={14} style={{verticalAlign:"-2px"}}/> },
   { id:"proforma", label:"Proforma", icon:<Wallet size={14} style={{verticalAlign:"-2px"}}/> },
+  { id:"invoices", label:"Hyresavier", icon:<FileText size={14} style={{verticalAlign:"-2px"}}/> },
   { id:"images", label:"Bilder", icon:<Image size={14} style={{verticalAlign:"-2px"}}/> },
   { id:"intresse", label:"Intresseanmälan", icon:<Clipboard size={14} style={{verticalAlign:"-2px"}}/> },
   { id:"export", label:"Exportera", icon:<Download size={14} style={{verticalAlign:"-2px"}}/> },
@@ -3531,6 +3532,7 @@ export default function App() {
   const [editPropertyForm, setEditPropertyForm] = useState({});
   const [globalLoading, setGlobalLoading] = useState(true);
   const [styrranta, setStyrranta] = useState(null);
+  const [pushEnabled, setPushEnabled] = useState(false);
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const isDesktop = useIsDesktop();
   const SIDEBAR_W = 240;
@@ -3593,6 +3595,65 @@ export default function App() {
       .then(rate => { if (rate && !rate.error) setStyrranta(rate); })
       .catch(() => {});
   }, []);
+
+  // Push-notiser: kolla vid start om den här enheten redan har en aktiv prenumeration.
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    navigator.serviceWorker.getRegistration().then(reg => {
+      if (!reg) return;
+      reg.pushManager.getSubscription().then(sub => { if (sub) setPushEnabled(true); });
+    });
+  }, []);
+
+  // Avi-påminnelser är nu per fastighet — hämtas som en karta { property_id: {day, frequency} }.
+  const [notifSettings, setNotifSettings] = useState({});
+  useEffect(() => {
+    sb.from("property_notification_settings").select("*").then(({ data }) => {
+      const map = {};
+      (data||[]).forEach(r => { map[r.property_id] = r; });
+      setNotifSettings(map);
+    });
+  }, []);
+
+  async function savePropertyReminder(propertyId, patch) {
+    const current = notifSettings[propertyId] || { invoice_reminder_day:20, invoice_reminder_frequency:1 };
+    const next = { ...current, ...patch, property_id:propertyId };
+    setNotifSettings(prev => ({ ...prev, [propertyId]: next }));
+    await sb.from("property_notification_settings").upsert(next, { onConflict:"property_id" });
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = atob(base64);
+    const out = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) out[i] = rawData.charCodeAt(i);
+    return out;
+  }
+
+  async function enablePushNotifications() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      alert("Push-notiser stöds tyvärr inte i den här webbläsaren.");
+      return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY),
+      });
+      await fetch("/api/push-subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sub),
+      });
+      setPushEnabled(true);
+    } catch (err) {
+      alert("Kunde inte aktivera notiser: " + err.message);
+    }
+  }
 
   const selectedProperty = nav.type==="property" ? properties.find(p=>p.id===nav.propertyId)||null : null;
   const filteredTenants = selectedProperty ? allTenants.filter(t=>t.property_id===selectedProperty.id) : allTenants;
@@ -3685,6 +3746,13 @@ export default function App() {
         </div>
         <TrendingUp size={15} color={BRASS} style={{ flexShrink:0 }} />
       </div>}
+      <div style={{ margin:"0 16px 12px" }}>
+        {pushEnabled ? (
+          <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, color:"rgba(255,255,255,0.35)" }}><Check size={12} color="#6ee7a0"/> Notiser på</div>
+        ) : (
+          <button onClick={enablePushNotifications} style={{ display:"flex",alignItems:"center",gap:6,width:"100%",padding:"7px 10px",borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.55)",cursor:"pointer",fontSize:11.5 }}>🔔 Aktivera notiser</button>
+        )}
+      </div>
       <div style={{ padding:"14px 16px",borderTop:"1px solid rgba(255,255,255,0.08)",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
         <div style={{ fontSize:11,color:"rgba(255,255,255,0.22)" }}>{properties.length} fastigheter</div>
         <button onClick={()=>sb.auth.signOut()} style={{ background:"none",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.4)",borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:11 }}>Logga ut</button>
@@ -3709,6 +3777,23 @@ export default function App() {
           <Building2 size={15} color={G} style={{ flexShrink:0 }} />
           <span style={{ fontWeight:700, fontSize:14, color:G }}>{selectedProperty.name}</span>
           {selectedProperty.address&&<span style={{ fontSize:13, color:"#9ca3af" }}>· {selectedProperty.address}</span>}
+        </div>}
+        {nav.type==="property"&&nav.tab==="invoices"&&selectedProperty&&<div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:16, marginBottom:20, padding:"12px 16px", background:"#f7f8f6", border:"1px solid #EAE7DF", borderRadius:12, fontSize:12.5 }}>
+          <span style={{ fontWeight:700, color:"#555" }}>🔔 Påminnelse om avier</span>
+          <label style={{ display:"flex", alignItems:"center", gap:6, color:"#555" }}>
+            Dag i månaden
+            <select value={notifSettings[selectedProperty.id]?.invoice_reminder_day ?? 20} onChange={e=>savePropertyReminder(selectedProperty.id,{invoice_reminder_day:Number(e.target.value)})} style={{ border:"1px solid #ddd", borderRadius:6, padding:"3px 6px", fontSize:12.5 }}>
+              {Array.from({length:28},(_,i)=>i+1).map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </label>
+          <label style={{ display:"flex", alignItems:"center", gap:6, color:"#555" }}>
+            Frekvens
+            <select value={notifSettings[selectedProperty.id]?.invoice_reminder_frequency ?? 1} onChange={e=>savePropertyReminder(selectedProperty.id,{invoice_reminder_frequency:Number(e.target.value)})} style={{ border:"1px solid #ddd", borderRadius:6, padding:"3px 6px", fontSize:12.5 }}>
+              <option value={1}>Varje månad</option>
+              <option value={2}>Varannan månad</option>
+              <option value={3}>Var tredje månad</option>
+            </select>
+          </label>
         </div>}
         {nav.type==="overview"&&<Dashboard tenants={allTenants} contracts={allContracts} issues={allIssues} properties={properties} selectedProperty={null} onIssueAdded={loadGlobal} loading={globalLoading} onOpenSearch={()=>setCmdkOpen(true)} onSelectProperty={goToProperty} />}
         {nav.type==="search"&&<GlobalSearch properties={properties} onNavigate={(tab,propId)=>{ setNav({type:"property",propertyId:propId,tab}); }} />}
