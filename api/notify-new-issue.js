@@ -1,3 +1,8 @@
+// api/notify-new-issue.js
+// Anropas direkt från appen (client-side) varje gång en ny felanmälan sparas —
+// se notifyNewIssue() i App.jsx. Vi använder INTE Supabase Database Webhooks
+// (det kräver numera en betald Supabase-nivå), utan skickar anropet själva istället.
+
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
 
@@ -10,12 +15,11 @@ webpush.setVapidDetails(
 );
 
 export default async function handler(req, res) {
-  const auth = req.headers["x-webhook-secret"];
-  if (auth !== process.env.SUPABASE_WEBHOOK_SECRET) return res.status(401).end();
+  if (req.method !== "POST") return res.status(405).end();
 
   try {
     const issue = req.body?.record;
-    if (!issue) return res.status(400).json({ error: "Ingen data i webhooken" });
+    if (!issue) return res.status(400).json({ error: "Ingen data skickades med" });
 
     let propertyName = "en fastighet";
     if (issue.property_id) {
