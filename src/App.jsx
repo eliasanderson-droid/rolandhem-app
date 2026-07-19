@@ -3686,11 +3686,15 @@ export default function App() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY),
       });
-      await fetch("/api/push-subscribe", {
+      const res = await fetch("/api/push-subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub),
       });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Servern kunde inte spara prenumerationen (${res.status}): ${body}`);
+      }
       setPushEnabled(true);
     } catch (err) {
       alert("Kunde inte aktivera notiser: " + err.message);
