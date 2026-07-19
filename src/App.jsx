@@ -3552,6 +3552,7 @@ export default function App() {
   const [globalLoading, setGlobalLoading] = useState(true);
   const [styrranta, setStyrranta] = useState(null);
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [showPushBanner, setShowPushBanner] = useState(false);
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const isDesktop = useIsDesktop();
   const SIDEBAR_W = 240;
@@ -3623,6 +3624,27 @@ export default function App() {
       reg.pushManager.getSubscription().then(sub => { if (sub) setPushEnabled(true); });
     });
   }, []);
+
+  // Visa en fråga om att aktivera notiser varje gång appen öppnas — men bara om
+  // webbläsaren inte redan sagt ja (permission "granted") eller nej permanent ("denied"),
+  // och bara om man inte redan avfärdat den i den här sessionen.
+  useEffect(() => {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+    if (Notification.permission !== "default") return;
+    if (sessionStorage.getItem("pushBannerDismissed")) return;
+    const t = setTimeout(() => setShowPushBanner(true), 1200);
+    return () => clearTimeout(t);
+  }, []);
+
+  function dismissPushBanner() {
+    setShowPushBanner(false);
+    sessionStorage.setItem("pushBannerDismissed", "1");
+  }
+
+  async function acceptPushBanner() {
+    setShowPushBanner(false);
+    await enablePushNotifications();
+  }
 
   // Avi-påminnelser är nu per fastighet — hämtas som en karta { property_id: {day, frequency} }.
   const [notifSettings, setNotifSettings] = useState({});
@@ -3791,6 +3813,14 @@ export default function App() {
           <kbd style={{ marginLeft:isDesktop?4:0,background:"#eee",borderRadius:5,padding:"1px 6px",fontSize:11,fontWeight:700,color:"#999",display:isDesktop?"inline":"none" }}>⌘K</kbd>
         </button>
       </div>
+      {showPushBanner&&<div style={{ background:G, color:"#fff", padding:isDesktop?"12px 32px":"12px 16px", display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
+        <span style={{ fontSize:14, flexShrink:0 }}>🔔</span>
+        <span style={{ fontSize:13, flex:1, minWidth:180 }}>Vill du få notiser om nya felanmälningar och när det är dags att skicka avier?</span>
+        <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+          <button onClick={acceptPushBanner} className="rh-btn-press" style={{ background:"#fff", color:G, border:"none", borderRadius:8, padding:"7px 14px", fontSize:12.5, fontWeight:700, cursor:"pointer" }}>Aktivera</button>
+          <button onClick={dismissPushBanner} style={{ background:"none", color:"rgba(255,255,255,0.65)", border:"1px solid rgba(255,255,255,0.25)", borderRadius:8, padding:"7px 14px", fontSize:12.5, cursor:"pointer" }}>Inte nu</button>
+        </div>
+      </div>}
       <div style={{ padding:isDesktop?"28px 32px":"16px",flex:1 }}>
         {nav.type==="property"&&nav.tab!=="overview"&&selectedProperty&&<div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:18, paddingBottom:12, borderBottom:"1px solid #EAE7DF" }}>
           <Building2 size={15} color={G} style={{ flexShrink:0 }} />
