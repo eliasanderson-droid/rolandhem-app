@@ -1729,7 +1729,7 @@ Uthyrare: [fastighetsbolag]`;
       .map(t => { const p=properties.find(x=>x.id===t.property_id), days=daysUntil(t.lease_end); return { key:"t-"+t.id, name:t.name, prop:p?.name, unit:t.unit, days, tenantId:t.id, propertyId:t.property_id, leaseEnd:t.lease_end, newTenantFound:t.new_tenant_found, newTenantFrom:t.new_tenant_from }; })
   ].sort((a,b)=>a.days-b.days);
   const [optimisticDone, setOptimisticDone] = useState(() => new Set());
-  const recent = [...issues].filter(i=>!optimisticDone.has(i.id)).sort((a,b)=>(b.reported||"").localeCompare(a.reported||"")).slice(0,4);
+  const recent = [...issues].filter(i=>!optimisticDone.has(i.id) && i.status!=="åtgärdad").sort((a,b)=>(b.reported||"").localeCompare(a.reported||""));
 
   return <div>
     {selectedProperty&&<div className="rh-hover-lift" style={{ position:"relative", height:180, borderRadius:16, overflow:"hidden", marginBottom:20, background: selectedProperty.cover_image_url?"#000":`linear-gradient(135deg,#2d6a4f,${G})` }}>
@@ -1802,7 +1802,7 @@ Uthyrare: [fastighetsbolag]`;
       <div>
         <div style={{ background:"#fff", border:"1px solid #E7E5E0", borderRadius:10, overflow:"hidden" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", borderBottom:"1px solid #E7E5E0" }}>
-            <h3 style={{ fontSize:13, fontWeight:700, margin:0, color:"#0F1512" }}>Senaste felanmälningar</h3>
+            <h3 style={{ fontSize:13, fontWeight:700, margin:0, color:"#0F1512" }}>Öppna felanmälningar</h3>
             <button onClick={openIssueForm} title="Ny felanmälan" style={{ width:26, height:26, borderRadius:8, background:G, color:"#fff", border:"none", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1 }}>+</button>
           </div>
           {recent.length===0?<div style={{ color:"#aaa", padding:20 }}>Inga ärenden.</div>:recent.map((i,idx)=>{
