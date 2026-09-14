@@ -711,8 +711,8 @@ function daysUntil(d) { if (!d) return null; return Math.ceil((new Date(d)-new D
 function Badge({ label, color="#888" }) {
   return <span style={{ background:color+"1a", color, borderRadius:999, padding:"3.5px 11px", fontSize:10.5, fontWeight:700 }}>{label}</span>;
 }
-function Card({ children, style, hoverable }) {
-  return <div className={hoverable?"rh-hover-lift":""} style={{ background:"#fff", borderRadius:R, border:"1px solid #efefef", padding:24, boxShadow:SHADOW.sm, lineHeight:1.5, ...style }}>{children}</div>;
+function Card({ children, style, hoverable, ...rest }) {
+  return <div className={hoverable?"rh-hover-lift":""} style={{ background:"#fff", borderRadius:R, border:"1px solid #efefef", padding:24, boxShadow:SHADOW.sm, lineHeight:1.5, ...style }} {...rest}>{children}</div>;
 }
 function StatCard({ label, value, sub, color=G }) {
   return <Card hoverable style={{ flex:1, minWidth:130, padding:"16px 20px" }}>
