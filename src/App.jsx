@@ -1334,7 +1334,7 @@ function ProspektModal({ tenant, property, onClose }) {
     const prevTransform = el.style.transform;
     el.style.transform = "scale(1)";
     try {
-      return await html2canvas(el, { scale:2, useCORS:true, backgroundColor:"#ffffff" });
+      return await html2canvas(el, { scale:2, useCORS:true, backgroundColor:"#ffffff", ignoreElements: node => node.getAttribute?.("data-no-export")==="1" });
     } finally {
       el.style.transform = prevTransform;
     }
@@ -1347,8 +1347,10 @@ function ProspektModal({ tenant, property, onClose }) {
       const img = canvas.toDataURL("image/jpeg", 0.95);
       const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
       const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = (canvas.height * pageW) / canvas.width;
-      pdf.addImage(img, "JPEG", 0, 0, pageW, pageH);
+      const pageMaxH = pdf.internal.pageSize.getHeight();
+      let w = pageW, h = (canvas.height * pageW) / canvas.width;
+      if (h > pageMaxH + 0.5) { h = pageMaxH; w = (canvas.width * pageMaxH) / canvas.height; } // ryms alltid på en A4-sida
+      pdf.addImage(img, "JPEG", (pageW - w) / 2, 0, w, h);
       pdf.save(`prospekt_lgh${tenant.unit}.pdf`);
     } catch(err) { toast("Kunde inte generera PDF: " + err.message, "error"); }
     setGenerating("");
@@ -1374,12 +1376,12 @@ function ProspektModal({ tenant, property, onClose }) {
   });
 
   function PhotoSlot({ slotKey, style }) {
-    return <div style={{ position:"relative", width:"100%", height:155, borderRadius:6, overflow:"hidden", background:"#e8e8e8", cursor:"pointer", ...style }}
+    return <div style={{ position:"relative", width:"100%", minHeight:155, borderRadius:6, overflow:"hidden", background:"#e8e8e8", cursor:"pointer", ...style }}
       onClick={()=>setPicker(slotKey)}>
       {data[slotKey]
-        ? <img src={data[slotKey]} crossOrigin="anonymous" alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+        ? <img src={data[slotKey]} crossOrigin="anonymous" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
         : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#aaa", fontSize:12, textAlign:"center", padding:8 }}>Klicka för att välja bild</div>}
-      <div style={{ position:"absolute", bottom:4, right:4, background:"rgba(0,0,0,0.55)", color:"#fff", borderRadius:6, padding:"2px 8px", fontSize:10 }}><Pencil size={14} style={{verticalAlign:"-2px"}}/> Byt bild</div>
+      <div data-no-export="1" style={{ position:"absolute", bottom:4, right:4, background:"rgba(0,0,0,0.55)", color:"#fff", borderRadius:6, padding:"2px 8px", fontSize:10 }}><Pencil size={14} style={{verticalAlign:"-2px"}}/> Byt bild</div>
     </div>;
   }
 
@@ -1404,14 +1406,14 @@ function ProspektModal({ tenant, property, onClose }) {
       </div>
       <div ref={scrollRef} style={{ overflow:"auto", maxHeight:"62vh", padding:16, background:"#eee", WebkitOverflowScrolling:"touch" }}>
         <div style={{ width:794*effectiveZoom, height:naturalHeight*effectiveZoom, margin:"0 auto", position:"relative" }}>
-        <div ref={previewRef} style={{ width:794, position:"absolute", top:0, left:0, transform:`scale(${effectiveZoom})`, transformOrigin:"top left", fontFamily:"Inter, sans-serif", color:"#1a3d2b", background:"#fff", boxShadow:"0 2px 12px rgba(0,0,0,0.12)" }}>
+        <div ref={previewRef} style={{ width:794, position:"absolute", top:0, left:0, transform:`scale(${effectiveZoom})`, transformOrigin:"top left", minHeight:1123, display:"flex", flexDirection:"column", fontFamily:"Inter, sans-serif", color:"#1a3d2b", background:"#fff", boxShadow:"0 2px 12px rgba(0,0,0,0.12)" }}>
           {/* HERO */}
           <div style={{ position:"relative", height:440, overflow:"hidden", cursor:"pointer" }} onClick={()=>setPicker("heroImage")}>
             {data.heroImage
               ? <img src={data.heroImage} crossOrigin="anonymous" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center 30%" }} />
               : <div style={{ position:"absolute", inset:0, background:"#e8e8e8", display:"flex", alignItems:"center", justifyContent:"center", color:"#aaa" }}>Klicka för att välja bakgrundsbild</div>}
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(to right, rgba(255,255,255,0.97) 44%, rgba(255,255,255,0.55) 65%, rgba(255,255,255,0) 100%)", pointerEvents:"none" }} />
-            <div style={{ position:"absolute", top:14, right:14, zIndex:5, background:"rgba(0,0,0,0.55)", color:"#fff", borderRadius:6, padding:"4px 10px", fontSize:11 }}><Pencil size={14} style={{verticalAlign:"-2px"}}/> Byt bakgrundsbild</div>
+            <div data-no-export="1" style={{ position:"absolute", top:14, right:14, zIndex:5, background:"rgba(0,0,0,0.55)", color:"#fff", borderRadius:6, padding:"4px 10px", fontSize:11 }}><Pencil size={14} style={{verticalAlign:"-2px"}}/> Byt bakgrundsbild</div>
             <div style={{ position:"relative", zIndex:2, padding:"36px 10px 0", display:"flex", flexDirection:"column", pointerEvents:"none" }}>
               <div style={{ marginBottom:22 }}>
                 <img src={LOGO} alt="Rolandhem Fastigheter AB" style={{ height:46, width:"auto", objectFit:"contain" }} />
@@ -1441,7 +1443,7 @@ function ProspektModal({ tenant, property, onClose }) {
             </div>
           </div>
           {/* BODY */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", flex:1 }}>
             <div style={{ padding:"28px 36px 28px 28px" }}>
               {[["feat1Title","feat1Desc",<IconWaves key="w"/>],["feat2Title","feat2Desc",<IconBalcony key="b"/>],["feat3Title","feat3Desc",<IconPlant key="p"/>],["feat4Title","feat4Desc",<IconPeople key="pe"/>]].map(([tk,dk,icon],i)=>
                 <div key={i} style={{ display:"flex", gap:14, marginBottom:20, alignItems:"flex-start" }}>
@@ -1454,7 +1456,7 @@ function ProspektModal({ tenant, property, onClose }) {
               )}
             </div>
             <div style={{ display:"grid", gridTemplateRows:"1fr 1fr", gap:4, padding:"4px 16px 4px 0" }}>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4, minHeight:0 }}>
                 <PhotoSlot slotKey="photo0" />
                 <PhotoSlot slotKey="photo1" />
               </div>
