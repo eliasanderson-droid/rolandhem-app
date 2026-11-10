@@ -2747,7 +2747,7 @@ function Contacts() {
     </div>
     {form&&<Modal title={form.id?"Redigera":"Ny kontakt"} onClose={()=>setForm(null)}>
       <label style={labelStyle}>Namn</label><input value={form.name||""} onChange={e=>setForm({...form,name:e.target.value})} style={inputStyle} />
-      <label style={labelStyle}>Kategori</label><select value={form.category||"VVS"} onChange={e=>setForm({...form,category:e.target.value})} style={inputStyle}>{Object.keys(catIcons).map(c=><option key={c} value={c}>{catIcons[c]} {c}</option>)}</select>
+      <label style={labelStyle}>Kategori</label><select value={form.category||"VVS"} onChange={e=>setForm({...form,category:e.target.value})} style={inputStyle}>{Object.keys(catIcons).map(c=><option key={c} value={c}>{c}</option>)}</select>
       <div style={{ display:"flex",gap:12 }}>
         <div style={{ flex:1 }}><label style={labelStyle}>Telefon</label><input value={form.phone||""} onChange={e=>setForm({...form,phone:e.target.value})} style={inputStyle} /></div>
         <div style={{ flex:1 }}><label style={labelStyle}>E-post</label><input value={form.email||""} onChange={e=>setForm({...form,email:e.target.value})} style={inputStyle} /></div>
